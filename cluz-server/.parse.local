@@ -1,0 +1,10 @@
+{
+  "applications": {
+    "Creo": {
+      "applicationId": "afGzwYJ5CnsA3nLydxxFJY1SIHnPS5NhsRRy4scA"
+    },
+    "_default": {
+      "link": "Creo"
+    }
+  }
+}

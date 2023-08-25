@@ -1,0 +1,504 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  relationMode      = "prisma"
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+model User {
+  id                         Int                          @id @default(autoincrement())
+  email                      String                       @unique @db.VarChar(255)
+  username                   String                       @unique @db.VarChar(255)
+  name                       String                       @db.VarChar(255)
+  typeId                     Int                          @default(1)
+  avatar                     String?                      @db.VarChar(255)
+  avatar_thumbnail           String?                      @db.VarChar(255)
+  cover                      String?                      @db.VarChar(255)
+  country                    String?                      @db.VarChar(255)
+  state                      String?                      @db.VarChar(255)
+  city                       String?                      @db.VarChar(255)
+  sex                        String?                      @db.VarChar(10)
+  birthday                   DateTime?
+  resetCode                  String?                      @db.VarChar(7)
+  resetCodeExpires           DateTime?
+  password                   String                       @db.VarChar(255)
+  phone                      String?                      @db.VarChar(16)
+  resume                     String?                      @db.VarChar(512)
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
+  Language                   Language                     @relation(fields: [languageId], references: [id])
+  type                       UserType                     @relation(fields: [typeId], references: [id])
+  languageId                 Int                          @default(1)
+  Publication                Publication[]
+  amounts                    UserAmounts[]
+  UserSetting                UserSetting[]
+  UserRole                   UserRole[]
+  UserPermission             UserPermission[]
+  refer                      Referral[]                   @relation("refer")
+  referredBy                 Referral[]                   @relation("referred")
+  Notification               Notification[]
+  Membership                 Membership[]
+  UserStatus                 UserStatus[]
+  sentMessages               Message[]                    @relation("senderMessages")
+  receivedMessages           Message[]                    @relation("receiverMessages")
+  conversations              ConversationParticipant[]
+  MarketingEmailLists        MarketingEmailLists[]
+  MarketingEmailListsMembers MarketingEmailListsMembers[]
+  UserNotes                  UserNotes[]
+  Community                  Community[]
+  TimelineCommunity          TimelineCommunity[]
+  CommunityMembers           CommunityMembers[]
+
+  @@index([typeId, languageId])
+}
+
+model UserType {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(56)
+  status    String?  @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  User      User[]
+}
+
+model Conversation {
+  id           Int                       @id @default(autoincrement())
+  ref          String                    @unique @default(uuid())
+  messages     Message[]                 @relation("messages")
+  status       ConversationType          @default(ACTIVE)
+  participants ConversationParticipant[] @relation("conversation")
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+}
+
+model ConversationParticipant {
+  id                   Int          @id @default(autoincrement())
+  userId               Int          @db.Int
+  user                 User         @relation(fields: [userId], references: [id])
+  conversationId       String
+  conversation         Conversation @relation("conversation", fields: [conversationId], references: [ref])
+  hasSeenLatestMessage Boolean
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([conversationId, userId])
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversationId String
+  conversation   Conversation @relation("messages", fields: [conversationId], references: [ref])
+  senderId       Int          @db.Int
+  content        String
+  viewed         Boolean
+  sender         User         @relation(name: "senderMessages", fields: [senderId], references: [id])
+  recipientId    Int?
+  recipient      User?        @relation(name: "receiverMessages", fields: [recipientId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([conversationId, recipientId, senderId])
+}
+
+//Model user status
+model UserStatus {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  description String?  @db.VarChar(512)
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  statusUntil DateTime
+
+  @@index([userId])
+}
+
+model Membership {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int      @unique
+  plan      Plan     @relation(fields: [planId], references: [id])
+  planId    Int
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+}
+
+model PlanPermission {
+  id           Int        @id @default(autoincrement())
+  planId       Int
+  permissionId Int
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  Plan         Plan       @relation(fields: [planId], references: [id])
+
+  @@index([planId, permissionId])
+}
+
+model Plan {
+  id          Int              @id @default(autoincrement())
+  name        String
+  type        String
+  description String?
+  price       Float
+  // Otros campos específicos del plan de membresía (por ejemplo, beneficios, duración, etc.)
+  Membership  Membership[]
+  Permission  PlanPermission[]
+}
+
+model AdminKpi {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String
+  value     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Referral {
+  id         Int  @id @default(autoincrement())
+  refer      User @relation("refer", fields: [referId], references: [id], onDelete: Cascade)
+  referId    Int
+  referred   User @relation("referred", fields: [referredId], references: [id])
+  referredId Int
+
+  @@index([referId, referredId])
+}
+
+model Role {
+  id             Int              @id @default(autoincrement())
+  name           String
+  description    String?
+  permissions    Permission[]     @relation("RolePermission")
+  UserRole       UserRole[]
+  RolePermission RolePermission[]
+}
+
+model UserRole {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id])
+
+  @@index([userId, roleId])
+}
+
+model UserPermission {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  user         User       @relation(fields: [userId], references: [id])
+  permissionId Int
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@index([userId, permissionId])
+}
+
+model Permission {
+  id             Int              @id @default(autoincrement())
+  name           String
+  description    String?
+  roles          Role[]           @relation("RolePermission")
+  UserPermission UserPermission[]
+  RolePermission RolePermission[]
+  PlanPermission PlanPermission[]
+}
+
+model RolePermission {
+  id           Int        @id @default(autoincrement())
+  role         Role       @relation(fields: [roleId], references: [id])
+  roleId       Int
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  permissionId Int
+
+  @@unique([roleId, permissionId])
+}
+
+model UserSetting {
+  id           Int    @id @default(autoincrement())
+  user         User   @relation(fields: [userId], references: [id])
+  userId       Int
+  settingName  String @db.VarChar(128)
+  settingValue String
+
+  @@index([userId])
+}
+
+model SuperAdminSetting {
+  id           Int    @id @default(autoincrement())
+  settingName  String @db.VarChar(128)
+  settingValue String
+}  
+
+model UserNotes {
+  id        Int               @id @default(autoincrement())
+  user      User              @relation(fields: [userId], references: [id])
+  scope     UserNoteScopeType @default(PLATFORM)
+  userId    Int
+  noteName  String            @db.VarChar(128)
+  noteValue String
+
+  @@index([userId])
+}
+
+model Language {
+  id   Int    @id @default(autoincrement())
+  name String
+  lng  String
+  User User[]
+}
+
+model Publication {
+  id                Int                     @id @default(autoincrement())
+  views             Int                     @default(0)
+  user              User                    @relation(fields: [userId], references: [id])
+  userId            Int
+  scope             String                  @default("PROFILE")
+  parentId          Int?                    @map("parentId")
+  function          PublicationFunctionType @default(POST)
+  type              PublicationType         @default(STATUS)
+  status            PublicationStatus       @default(PUBLISHED)
+  reaction          String?                 @default("Excited")
+  contents          PublicationContent[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  comments          Publication[]           @relation("ParentCommentToPublication")
+  parent            Publication?            @relation("ParentCommentToPublication", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  TimelineCommunity TimelineCommunity[]
+
+  @@index([userId, parentId])
+}
+
+model Community {
+  id            Int                 @id @default(autoincrement())
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        Int
+  description   String?
+  requestAccess Boolean             @default(false)
+  name          String              @db.VarChar(255)
+  avatar        String?             @db.VarChar(255)
+  cover         String?             @db.VarChar(255)
+  slug          String              @unique @db.VarChar(255)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  deleteAt      DateTime?
+  timeline      TimelineCommunity[]
+  members       CommunityMembers[]
+
+  @@index([userId])
+}
+
+model CommunityMembers {
+  id          Int       @id @default(autoincrement())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  status      String    @default("ACTIVE")
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  communityId Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([communityId, userId])
+}
+
+model TimelineCommunity {
+  id            Int         @id @default(autoincrement())
+  community     Community   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  communityId   Int
+  readed        Boolean     @default(false)
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  publicationId Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  User          User?       @relation(fields: [userId], references: [id])
+  userId        Int?
+
+  @@index([communityId, publicationId])
+}
+
+model PublicationContent {
+  id            Int                    @id @default(autoincrement())
+  publicationId Int
+  type          PublicationContentType @default(TEXT)
+  publication   Publication            @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  content       String                 @db.Text
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+}
+
+model Notification {
+  id      Int              @id @default(autoincrement())
+  userId  Int
+  content String
+  image   String
+  viewed  Boolean          @default(false)
+  data    DateTime         @default(now())
+  type    NotificationType
+  // Otros campos que puedas necesitar
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model AdminCurrencies {
+  id                    Int                     @id @default(autoincrement())
+  name                  String                  @db.VarChar(11)
+  main                  Int                     @default(0)
+  code                  String                  @db.VarChar(11)
+  rate                  Float
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  UserAmounts           UserAmounts[]
+  AdminMovementsAmounts AdminMovementsAmounts[]
+}
+
+model UserAmounts {
+  id             Int             @id @default(autoincrement())
+  user           User            @relation(fields: [userId], references: [id])
+  userId         Int
+  currency       AdminCurrencies @relation(fields: [currencyId], references: [id])
+  currencyId     Int             @default(1)
+  amount         Float           @default(0)
+  amount_pending Float           @default(0)
+  amount_stopad  Float           @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([currencyId])
+}
+
+model AdminMovementsAmounts {
+  id         BigInt             @id @default(autoincrement())
+  model      ModelType          @default(USER)
+  modelId    Int
+  details    String             @db.VarChar(128)
+  currency   AdminCurrencies    @relation(fields: [currencyId], references: [id])
+  currencyId Int
+  amount     Float
+  type       MovementAmountType @default(CREDIT)
+  status     Status             @default(COMPLETED)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@index([currencyId])
+}
+
+model MarketingEmailLists {
+  id      Int                          @id @default(autoincrement())
+  name    String
+  type    MarketingEmailListType       @default(PLATFORM)
+  user    User?                        @relation(fields: [userId], references: [id])
+  userId  Int?
+  members MarketingEmailListsMembers[]
+
+  @@index([userId])
+}
+
+model MarketingEmailListsMembers {
+  id     Int                    @id @default(autoincrement())
+  type   MarketingEmailListType @default(PLATFORM)
+  list   MarketingEmailLists    @relation(fields: [listId], references: [id])
+  listId Int
+  email  String
+  User   User?                  @relation(fields: [userId], references: [id])
+  userId Int?
+
+  @@index([email, listId, userId])
+}
+
+enum MarketingEmailListType {
+  PLATFORM
+  CHURCH
+  MINISTRY
+  BUSINESS
+  ARTIST
+  OTHER
+}
+
+enum MovementAmountType {
+  DEBIT
+  CREDIT
+}
+
+enum ModelType {
+  USER
+  PRODUCT
+  SERVICE
+}
+
+enum UserNoteScopeType {
+  PERSON
+  CHURCH
+  MINISTRY
+  BUSINESS
+  ARTIST
+  PLATFORM
+}
+
+enum NotificationType {
+  MESSAGE
+  MENTION
+  FOLLOW
+  ALERT
+  ACCOUNT
+  PUBLICATION
+}
+
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+  DELETED
+  PENDING
+  INACTIVE
+}
+
+enum PublicationContentType {
+  TEXT
+  VIDEO
+  GALLERY
+  BIBLE
+  LINK
+  CUSTOM
+  DISCUSSION
+}
+
+enum ConversationType {
+  ACTIVE
+  PENDING
+  ARCHIVED
+  DELETED
+  CLOSET
+}
+
+enum PublicationType {
+  STATUS
+  VIDEO
+  ARTICLE
+  EVENT
+  BIBLE
+  NOTICE
+  ORATION
+  ADS
+  DISCUSSION
+}
+
+enum PublicationFunctionType {
+  POST
+  COMMENT
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  PENDING
+  COMPLETED
+  DRAFT
+}

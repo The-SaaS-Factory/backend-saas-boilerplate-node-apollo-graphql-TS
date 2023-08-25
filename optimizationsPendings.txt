@@ -1,0 +1,1 @@
+1- algoliaFacade(user); in user, pass to job 

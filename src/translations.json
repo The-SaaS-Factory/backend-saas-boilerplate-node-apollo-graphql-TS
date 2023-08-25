@@ -1,0 +1,30 @@
+{
+    "en": {
+      "UnableToChangePassword": "Unable to change the password.",
+      "winTournament" :"Congratulations!, You win: {{points}} points",
+      "movementAmount" : "Has received {{amount}}",
+      "email_registered" : "Email already in use",
+      "torneoNotStartStil" : "The tournament has not started yet",
+      "torneoAlreadyCompleted" :  "The tournament has already been completed",
+      "newFollow": "{{name}} is following you "
+    },
+    "es": {
+        "UnableToChangePassword": "No se pudo cambiar la contraseña",
+        "winTournament" :"Felicitaciones!, Ganaste un torneo y obtuviste: {{points}} puntos",
+        "movementAmount" : "Ha recibido {{amount}}",
+        "email_registered" : "Email already in use",
+        "torneoNotStartStil" : "El torneo aún no ha comenzado",
+        "torneoAlreadyCompleted" :  "El torneo ya ha sido completado",
+        "newFollow": "{{name}} te está siguiendo"
+    },
+    "pt": {
+        "UnableToChangePassword": "Não foi possível alterar a senha",
+        "winTournament" :"Parabéns! Você ganhou um torneio e obteve: {{points}} pontos",
+        "movementAmount" : "Recebeu {{amount}}",
+        "email_registered" : "Email já em uso",
+        "torneoNotStartStil" : "O torneio ainda não começou",
+        "torneoAlreadyCompleted" :  "O torneio já foi concluído",
+        "newFollow": "{{name}} está seguindo você"
+    }
+  }
+  
