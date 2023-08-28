@@ -16,6 +16,7 @@ import bodyParser from "body-parser";
 import { imageKitFacade } from "../facades/imagekit.js";
 import { generateRandomString } from "../facades/str.js";
 import { fetchLinkDetails } from "../facades/linkDetailsFetcher.js";
+import { generateKpi } from "../facades/adminFacade.js";
 //  import { makeImage } from "../facades/makeImage.js";
 
 const router = express.Router();
@@ -47,6 +48,14 @@ router.post("/saveImage", async (req, res) => {
   } else {
     res.status(500);
   }
+});
+
+router.post("/generateKpis", async (req, res) => {
+  //get push subscription object from the request
+  await generateKpi();
+  
+  
+  res.status(200).json({});
 });
 
 router.post("/subscribe", (req, res) => {

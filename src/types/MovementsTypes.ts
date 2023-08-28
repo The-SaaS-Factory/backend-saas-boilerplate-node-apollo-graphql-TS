@@ -10,3 +10,4 @@ export type MovementType = {
   type: MovementAmountType;
   status: Status;
 };
+

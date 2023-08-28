@@ -1,3 +1,4 @@
+import { createPaymentsServicesByDefault } from "../facades/paymentFacade.js";
 import { MyContext } from "../types/MyContextInterface";
 import { Prisma, PrismaClient, UserType } from "@prisma/client";
 
@@ -83,6 +84,7 @@ type Query {
       search: String
     ): [User],
     getSuperAdminSettings: [SuperAdminSettingType],
+    getPaymentsSettings: [SuperAdminSettingType],
     getLanguages: [Language],
     getPermissions: [Permission],
     getRoles: [Role],
@@ -196,6 +198,15 @@ const resolvers = {
 
       return settings;
     },
+    getPaymentsSettings: async (root: any, args: {}, context: MyContext) => {
+      const settings = await prisma.superAdminSetting.findMany({ where: {
+        settingName: {
+          in: ['QVAPAY_CLIENT_ENABLED','QVAPAY_MODE','STRIPE_CLIENT_ENABLED','STRIPE_MODE']
+        }
+      } });
+
+      return settings;
+    },
     getKpis: async (root: any, args: any, context: MyContext) => {
       const period = args.period || 1;
       const kpis = await prisma.adminKpi.findMany({
@@ -295,6 +306,8 @@ const resolvers = {
                   settingValue: setting.settingValue,
                 },
               });
+
+              createPaymentsServicesByDefault(setting.settingName);
             }
           })
         );
@@ -313,9 +326,6 @@ const resolvers = {
       return role;
     },
     createPlan: async (root: any, args: any, context: MyContext) => {
-    
- 
-
       await prisma.plan.upsert({
         where: {
           id: args.planId ? args.planId : 0,

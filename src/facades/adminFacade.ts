@@ -20,7 +20,6 @@ export const generateKpi = async () => {
     },
   });
 
- 
   //memberships_actived_count_total
   await prisma.adminKpi.create({
     data: {
@@ -29,4 +28,26 @@ export const generateKpi = async () => {
       value: await prisma.membership.count(),
     },
   });
+
+  return true;
+};
+
+export const getSuperAdminSetting = async (settingName: string) => {
+  const setting = await prisma.superAdminSetting.findFirst({
+    where: {
+      settingName: settingName,
+    },
+  });
+
+  return setting ? setting.settingValue : null;
+};
+
+export const getAdminSetting = async (settingName: string) => {
+  const setting = await prisma.userSetting.findFirst({
+    where: {
+      settingName: settingName,
+    },
+  });
+
+  return setting ? setting.settingValue : null;
 };

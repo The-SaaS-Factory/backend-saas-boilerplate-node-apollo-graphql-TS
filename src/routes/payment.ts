@@ -5,6 +5,8 @@ import bodyParser from "body-parser";
 import { MovementType } from "../types/MovementsTypes";
 import { newMovement } from "../facades/movementsAmounts.js";
 import { PrismaClient } from "@prisma/client";
+import { stripeCreateSuscriptionApi } from "../facades/stripeFacade.js";
+import { stripeEventBuyCredit, stripeEventInvoicePaid } from "../facades/paymentFacade.js";
 
 const prisma = new PrismaClient();
 
@@ -161,12 +163,22 @@ payments.post("/create-checkout-stripe", async (req, res) => {
     console.log(error);
   }
 });
+payments.post("/create-stripe-subscription", async (req, res) => {
+  try {
+    const response = await stripeCreateSuscriptionApi(req.body);
+    res.status(200).send(response);
+  } catch (error) {
+    console.log(error);
+  }
+});
 
 payments.post(
   "/stripe/webhook",
   bodyParser.raw({ type: "application/json" }),
   async (request, response) => {
     const payload = request.body;
+    // console.log(payload);
+
     const payloadString = JSON.stringify(payload, null, 2);
     const secret = endpointSecret;
 
@@ -179,23 +191,16 @@ payments.post(
     const eventData = event.data.object as Stripe.PaymentIntent;
 
     try {
-      if (event.type === "checkout.session.completed" && eventData) {
-        //CREDIT
-        let payload: MovementType = {
-          amount: eventData.metadata?.creditAmount
-            ? parseInt(eventData.metadata?.creditAmount)
-            : 1,
-          model: "USER",
-          modelId: eventData.metadata?.userId
-            ? parseInt(eventData.metadata?.userId)
-            : 0,
-          details: "Add credit",
-          currencyId: 1,
-          type: "CREDIT",
-          status: "COMPLETED",
-        };
+      switch (event.type) {
+        case "checkout.session.completed":
+          await stripeEventBuyCredit(eventData);
+          break;
+        case "invoice.paid":
+          await stripeEventInvoicePaid(eventData);
+          break;
 
-        await newMovement(prisma, payload);
+        default:
+          break;
       }
 
       return response.status(200).send(`OK`);

@@ -8,6 +8,10 @@ import {
   resolvers as CommunityResolvers,
 } from "./community.js";
 import {
+  typeDefs as InvoiceTypes,
+  resolvers as InvoiceResolvers,
+} from "./invoices.js";
+import {
   typeDefs as ConversationTypes,
   resolvers as ConversationResolvers,
 } from "./messages.js";
@@ -40,6 +44,7 @@ const typeDefs = [
   MembershipTypes,
   CommunityTypes,
   UsersTypes,
+  InvoiceTypes,
   CurrenciesTypes,
   PublicationTypes,
 
@@ -51,6 +56,7 @@ const resolvers = [
   EconomyResolvers,
   MembershipResolvers,
   PublicationResolvers,
+  InvoiceResolvers,
   CommunityResolvers,
   CurrenciesResolvers,
   AdministrationResolvers,

@@ -21,7 +21,7 @@ import { env } from "process";
 import webpush from "web-push";
 import path from "path";
 import routes from "./routes/routes.js";
-import { generateKpi } from "./facades/admin.js";
+import { generateKpi } from "./facades/adminFacade.js";
 import fetch from "node-fetch";
 
 import payments from "./routes/payment.js";

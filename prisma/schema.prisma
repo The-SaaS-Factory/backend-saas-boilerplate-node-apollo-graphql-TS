@@ -56,6 +56,7 @@ model User {
   Community                  Community[]
   TimelineCommunity          TimelineCommunity[]
   CommunityMembers           CommunityMembers[]
+  invoices                   Invoice[]
 
   @@index([typeId, languageId])
 }
@@ -67,6 +68,28 @@ model UserType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   User      User[]
+}
+
+model Invoice {
+  id            Int             @id @default(autoincrement())
+  userId        Int             @db.Int
+  user          User            @relation(fields: [userId], references: [id])
+  currency      AdminCurrencies @relation(fields: [currencyId], references: [id])
+  currencyId    Int             @default(1)
+  gateway       String          @db.VarChar(56)
+  gatewayId     String?         @db.VarChar(512)
+  model         String?         @db.VarChar(512)
+  modelId       Int?
+  details       String?         @db.VarChar(512)
+  amount        Float
+  invoiceUrl    String?         @db.VarChar(512)
+  invoicePdfUrl String?         @db.VarChar(512)
+  status        String          @default("ACTIVE")
+  paidAt        DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId, currencyId])
 }
 
 model Conversation {
@@ -126,7 +149,7 @@ model Membership {
   id        Int      @id @default(autoincrement())
   user      User     @relation(fields: [userId], references: [id])
   userId    Int      @unique
-  plan      Plan     @relation(fields: [planId], references: [id])
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   planId    Int
   startDate DateTime
   endDate   DateTime
@@ -149,9 +172,9 @@ model Plan {
   type        String
   description String?
   price       Float
-  // Otros campos específicos del plan de membresía (por ejemplo, beneficios, duración, etc.)
   Membership  Membership[]
   Permission  PlanPermission[]
+  settings    PlanSetting[]
 }
 
 model AdminKpi {
@@ -232,11 +255,21 @@ model UserSetting {
   @@index([userId])
 }
 
+model PlanSetting {
+  id           Int    @id @default(autoincrement())
+  plan         Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId       Int
+  settingName  String @db.VarChar(128)
+  settingValue String
+
+  @@index([planId])
+}
+
 model SuperAdminSetting {
   id           Int    @id @default(autoincrement())
   settingName  String @db.VarChar(128)
   settingValue String
-}  
+}
 
 model UserNotes {
   id        Int               @id @default(autoincrement())
@@ -357,6 +390,7 @@ model AdminCurrencies {
   updatedAt             DateTime                @updatedAt
   UserAmounts           UserAmounts[]
   AdminMovementsAmounts AdminMovementsAmounts[]
+  invoices              Invoice[]
 }
 
 model UserAmounts {
