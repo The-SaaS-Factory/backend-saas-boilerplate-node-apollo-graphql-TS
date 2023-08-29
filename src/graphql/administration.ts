@@ -43,12 +43,23 @@ const typeDefs = `#graphql
     permission: Permission
 } 
  
+ type FrontendComponent {
+    id: ID!
+    name: String
+    type: String
+    data: String
+    description: String
+    Language: Language
+} 
+ 
  type UserRole {
     id: ID!
     userId: Int
     roleId: Int
     role: Role
 } 
+
+
  type UserPermission {
     id: ID!
     userId: Int
@@ -90,9 +101,11 @@ type Query {
     getRoles: [Role],
     getPlans: [Plan],
     getKpis(period: Int): [Kpi],
+    getFrontendComponents(name: String, language: String): [FrontendComponent]
   }
 
 type Mutation {
+    createFrontendCoponent(id: Int, name: String, data: String, action: String): Boolean
     createLanguage(
       name: String,
       lng: String
@@ -108,6 +121,7 @@ type Mutation {
       description: String
     ): Language,
     deletePlan(planId: Int): Boolean
+    deleteLanguage(languageId: Int!): Boolean
     createRole(
       name: String,
       description: String
@@ -199,13 +213,55 @@ const resolvers = {
       return settings;
     },
     getPaymentsSettings: async (root: any, args: {}, context: MyContext) => {
-      const settings = await prisma.superAdminSetting.findMany({ where: {
-        settingName: {
-          in: ['QVAPAY_CLIENT_ENABLED','QVAPAY_MODE','STRIPE_CLIENT_ENABLED','STRIPE_MODE']
-        }
-      } });
+      const settings = await prisma.superAdminSetting.findMany({
+        where: {
+          settingName: {
+            in: [
+              "QVAPAY_CLIENT_ENABLED",
+              "QVAPAY_MODE",
+              "STRIPE_CLIENT_ENABLED",
+              "STRIPE_MODE",
+            ],
+          },
+        },
+      });
 
       return settings;
+    },
+    getFrontendComponents: async (root: any, args: any, context: MyContext) => {
+      if (args.name) {
+        if (args.language) {
+          const language = await prisma.language.findFirst({
+            where: {
+              lng: args.language,
+            },
+          });
+          return await prisma.frontendComponent.findMany({
+            where: {
+              name: args.name,
+              languageId: language.id,
+            },
+            include: {
+              Language: true,
+            },
+          });
+        } else {
+          return await prisma.frontendComponent.findMany({
+            where: {
+              name: args.name,
+            },
+            include: {
+              Language: true,
+            },
+          });
+        }
+      } else {
+        return await prisma.frontendComponent.findMany({
+          include: {
+            Language: true,
+          },
+        });
+      }
     },
     getKpis: async (root: any, args: any, context: MyContext) => {
       const period = args.period || 1;
@@ -263,6 +319,54 @@ const resolvers = {
     },
   },
   Mutation: {
+    createFrontendCoponent: async (
+      root: any,
+      args: any,
+      context: MyContext
+    ) => {
+      try {
+        const component = await prisma.frontendComponent.findFirst({
+          where: {
+            id: args.id ?? 0,
+          },
+        });
+
+        if (component) {
+          if (args.action && args.action === "DELETE") {
+            const component = await prisma.frontendComponent.delete({
+              where: {
+                id: args.id ?? 0,
+              },
+            });
+          } else {
+            await prisma.frontendComponent.update({
+              where: {
+                id: component?.id ?? 0,
+              },
+              data: {
+                name: args.name,
+                data: args.data,
+              },
+            });
+          }
+        } else {
+          const languages = await prisma.language.findMany();
+          const payload = languages.map((lng: any) => {
+            return {
+              name: args.name,
+              data: args.data,
+              languageId: lng.id,
+            };
+          });
+          await prisma.frontendComponent.createMany({
+            data: payload,
+          });
+        }
+        return true;
+      } catch (error) {
+        throw new Error(error.message);
+      }
+    },
     createLanguage: async (root: any, args: any, context: MyContext) => {
       const language = await prisma.language.create({
         data: {
@@ -277,6 +381,25 @@ const resolvers = {
         await prisma.plan.delete({
           where: {
             id: args.planId,
+          },
+        });
+        return true;
+      } catch (error) {
+        throw new Error(error.message);
+      }
+    },
+    deleteLanguage: async (root: any, args: any, context: MyContext) => {
+      try {
+        const count = await prisma.language.count();
+
+        if (count === 1) {
+          throw new Error(
+            "You cannot delete all languages, there must be at least 1"
+          );
+        }
+        await prisma.language.delete({
+          where: {
+            id: args.languageId,
           },
         });
         return true;

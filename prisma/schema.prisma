@@ -70,6 +70,20 @@ model UserType {
   User      User[]
 }
 
+model FrontendComponent {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(256)
+  type        String   @default("CUSTOM")
+  Language    Language @relation(fields: [languageId], references: [id])
+  languageId  Int      @default(1)
+  description String?
+  data        String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([languageId])
+}
+
 model Invoice {
   id            Int             @id @default(autoincrement())
   userId        Int             @db.Int
@@ -283,10 +297,11 @@ model UserNotes {
 }
 
 model Language {
-  id   Int    @id @default(autoincrement())
-  name String
-  lng  String
-  User User[]
+  id                Int                 @id @default(autoincrement())
+  name              String
+  lng               String
+  User              User[]
+  FrontendComponent FrontendComponent[]
 }
 
 model Publication {
