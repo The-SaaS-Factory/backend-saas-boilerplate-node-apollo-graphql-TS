@@ -230,16 +230,18 @@ const resolvers = {
     },
     getFrontendComponents: async (root: any, args: any, context: MyContext) => {
       if (args.name) {
-        if (args.language) {
-          const language = await prisma.language.findFirst({
-            where: {
-              lng: args.language,
-            },
-          });
+        const argLanguage = args.language ? args.language : "en";
+        const language = await prisma.language.findFirst({
+          where: {
+            lng: argLanguage,
+          },
+        });
+
+        if (language) {
           return await prisma.frontendComponent.findMany({
             where: {
               name: args.name,
-              languageId: language.id,
+              languageId: language?.id ?? 0,
             },
             include: {
               Language: true,
