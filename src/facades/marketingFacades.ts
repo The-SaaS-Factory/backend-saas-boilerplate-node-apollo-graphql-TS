@@ -11,7 +11,7 @@ export const checkMarketingActionsForNewUser = async (user) => {
   });
 
   if (freeTrial && freeTrial.settingValue == "true") {
-    const plan = await prisma.superAdminSetting.findFirst({
+    const planTrial = await prisma.superAdminSetting.findFirst({
       where: {
         settingName: "MARKETING_FREE_TRIAL_PLAN",
       },
@@ -22,20 +22,30 @@ export const checkMarketingActionsForNewUser = async (user) => {
       },
     });
 
-    if (plan) {
-      const months = calculateMonthsFromDays(
-        days ? parseInt(days.settingValue) : 14
-      );
-      updateMembership(prisma, user.id, plan.id, months, true);
+    if (planTrial) {
+      const plan = await prisma.plan.findUnique({
+        where: {
+          id: parseInt(planTrial.settingValue),
+        },
+      });
+
+      if (plan) {
+        const months = calculateMonthsFromDays(
+          days ? parseInt(days.settingValue) : 14
+        );
+        updateMembership(prisma, user.id, plan.id, months, true);
+      } else {
+        //send log
+        //#Fix add module of logs/actions for super admin,
+      }
     }
   }
 };
 
 function calculateMonthsFromDays(days: number) {
-  const averageDaysPerMonth = 30.44; // Average days in a month
+  const averageDaysPerMonth = 30.44;
 
-  const months = Math.floor(days / averageDaysPerMonth); // Number of complete months
-  const remainingDays = days % averageDaysPerMonth; // Remaining days beyond complete months
-
+  const months = days / averageDaysPerMonth;
+ 
   return months;
 }

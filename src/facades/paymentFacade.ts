@@ -207,16 +207,13 @@ export const createInvoice = async (invoicePayload: InvoiceType) => {
     })
     .catch((e) => console.log(e));
 };
-export const updateInvoice = async (invoiceId: number, invoiceStatus: string) => {
+export const updateInvoice = async (invoiceId: number, payload) => {
   await prisma.invoice
     .update({
       where: {
         id: invoiceId,
       },
-      data: {
-        status: invoiceStatus,
-        paidAt: invoiceStatus === 'PAID' && new Date(),
-      },
+      data: payload,
     })
     .catch((e) => console.log(e));
 };
@@ -250,7 +247,7 @@ export const stripeEventInvoicePaid = async (eventData) => {
   });
 
   if (invoice) {
-    updateInvoice(invoice.id, "PAID");
+  
     if (invoice.model === "plan") {
       const plan = await prisma.plan.findUnique({
         where: {
@@ -289,7 +286,14 @@ export const stripeEventInvoicePaid = async (eventData) => {
             break;
         }
 
-        await updateMembership(prisma, invoice.userId, invoice.modelId, months, false);
+       const membership = await updateMembership(prisma, invoice.userId, invoice.modelId, months, false);
+       const payload = {
+         status: 'PAID',
+         paidAt:  new Date(),
+         model: 'MEMBERSHIP',
+         modelId : membership.id
+       }
+        updateInvoice(invoice.id, payload);
       }
     }
   }

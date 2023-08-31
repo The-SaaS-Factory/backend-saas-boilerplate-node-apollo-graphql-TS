@@ -57,6 +57,7 @@ model User {
   TimelineCommunity          TimelineCommunity[]
   CommunityMembers           CommunityMembers[]
   invoices                   Invoice[]
+  UserCapabilities           UserCapabilities[]
 
   @@index([typeId, languageId])
 }
@@ -182,14 +183,15 @@ model PlanPermission {
 }
 
 model Plan {
-  id          Int              @id @default(autoincrement())
-  name        String
-  type        String
-  description String?
-  price       Float
-  Membership  Membership[]
-  Permission  PlanPermission[]
-  settings    PlanSetting[]
+  id               Int                @id @default(autoincrement())
+  name             String
+  type             String
+  description      String?   @db.Text
+  price            Float
+  Membership       Membership[]
+  Permission       PlanPermission[]
+  settings         PlanSetting[]
+  PlanCapabilities PlanCapabilities[]
 }
 
 model AdminKpi {
@@ -248,6 +250,38 @@ model Permission {
   UserPermission UserPermission[]
   RolePermission RolePermission[]
   PlanPermission PlanPermission[]
+}
+
+model Capabilitie {
+  id               Int                @id @default(autoincrement())
+  name             String
+  description      String?   @db.Text
+  type             String   @default("LIMIT") 
+  PlanCapabilities PlanCapabilities[]
+  UserCapabilities UserCapabilities[]
+}
+
+model PlanCapabilities {
+  id            Int         @id @default(autoincrement())
+  capabilitieId Int
+  planId        Int
+  count         Int
+  name          String?
+  plan          Plan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  capabilitie   Capabilitie @relation(fields: [capabilitieId], references: [id], onDelete: Cascade)
+
+  @@index([planId, capabilitieId])
+}
+
+model UserCapabilities {
+  id            Int         @id @default(autoincrement())
+  capabilitieId Int
+  userId        Int
+  count         Int
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  capabilitie   Capabilitie @relation(fields: [capabilitieId], references: [id], onDelete: Cascade)
+
+  @@index([userId, capabilitieId])
 }
 
 model RolePermission {

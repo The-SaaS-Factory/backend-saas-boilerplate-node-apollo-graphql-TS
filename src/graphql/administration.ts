@@ -42,6 +42,12 @@ const typeDefs = `#graphql
     permissionId: Int
     permission: Permission
 } 
+ type PlanPermission {
+    id: ID!
+    planId: Int
+    permissionId: Int
+    permission: Permission
+} 
  
  type FrontendComponent {
     id: ID!

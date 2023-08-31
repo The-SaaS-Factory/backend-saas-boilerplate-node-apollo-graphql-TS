@@ -112,6 +112,7 @@ type Avatar {
       Membership: [Membership],
       UserRole: [UserRole]
       UserPermission: [UserPermission]
+      UserCapabilities: [UserCapabilitieType]
   }
  
 
@@ -249,12 +250,18 @@ const resolvers = {
             select: {
               endDate: true,
               plan: {
-                select: {
-                  name: true,
+                include: {
+                  PlanCapabilities: {
+                    include: {
+                      capabilitie: true,
+                    },
+                  },
                 },
               },
             },
           },
+          UserCapabilities: true,
+
           Language: true,
           UserSetting: true,
           amounts: {
