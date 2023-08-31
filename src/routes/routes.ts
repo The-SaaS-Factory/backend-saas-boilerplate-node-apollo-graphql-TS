@@ -8,6 +8,7 @@ import {
   migrateDbSeedAclPermissions,
   migrateDbSeedAdminUser,
   migrateDbSeedLanguageAndCurrency,
+  migrateFrontendComponentsByDefault,
   migrateUserTypes,
 } from "../../prisma/seed.js";
 import { env } from "process";
@@ -93,6 +94,15 @@ router.get("/migrate/userType", (req, res) => {
   // return res.send("not available");
   try {
     migrateUserTypes();
+    return "ok";
+  } catch (error) {
+    console.log(error);
+  }
+});
+router.get("/migrate/frontend-components", (req, res) => {
+  // return res.send("not available");
+  try {
+    migrateFrontendComponentsByDefault();
     return "ok";
   } catch (error) {
     console.log(error);

@@ -13,7 +13,7 @@ import {
 const typeDefs = `#graphql
 
 type PlanType {
-    id: ID!
+    id: ID
     name: String
     type: String
     price: Float
@@ -45,7 +45,7 @@ type SubscriptionStripePaymentTpe {
   
   type Mutation {
         buyPlan(planId: Int!, gateway: String): Boolean
-        buyPlanWithStripe(planId: Int!, gateway: String, gatewayPayload:String): SubscriptionStripePaymentTpe
+        buyPlanWithStripe(planId: Int!, gateway: String, gatewayPayload:String!): SubscriptionStripePaymentTpe
         connectStripePlanWithLocalPlan(planId:Int!): Boolean
     }
 `;
@@ -118,7 +118,7 @@ const resolvers = {
             break;
         }
 
-        await updateMembership(prisma, context.user.id, plan.id, months);
+        await updateMembership(prisma, context.user.id, plan.id, months, false);
 
         return true;
       } else {

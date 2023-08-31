@@ -124,6 +124,9 @@ export const createStripeSubscription = async (
         name: user.name,
         paymentMethod,
       };
+
+      console.log(customerPayload);
+      
       const customer = await stripeCreateCustomer(customerPayload);
       if (customer) {
         customerId = customer.id;
@@ -286,7 +289,7 @@ export const stripeEventInvoicePaid = async (eventData) => {
             break;
         }
 
-        await updateMembership(prisma, invoice.userId, invoice.modelId, months);
+        await updateMembership(prisma, invoice.userId, invoice.modelId, months, false);
       }
     }
   }

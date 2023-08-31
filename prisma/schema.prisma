@@ -160,14 +160,15 @@ model UserStatus {
 }
 
 model Membership {
-  id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int      @unique
-  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
-  planId    Int
-  startDate DateTime
-  endDate   DateTime
-  createdAt DateTime @default(now())
+  id               Int       @id @default(autoincrement())
+  user             User      @relation(fields: [userId], references: [id])
+  userId           Int       @unique
+  plan             Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId           Int
+  startDate        DateTime
+  endDateFreeTrial DateTime?
+  endDate          DateTime
+  createdAt        DateTime  @default(now())
 }
 
 model PlanPermission {
@@ -264,7 +265,7 @@ model UserSetting {
   user         User   @relation(fields: [userId], references: [id])
   userId       Int
   settingName  String @db.VarChar(128)
-  settingValue String
+  settingValue String @db.Text
 
   @@index([userId])
 }
@@ -274,7 +275,7 @@ model PlanSetting {
   plan         Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
   planId       Int
   settingName  String @db.VarChar(128)
-  settingValue String
+  settingValue String @db.Text
 
   @@index([planId])
 }
@@ -282,7 +283,7 @@ model PlanSetting {
 model SuperAdminSetting {
   id           Int    @id @default(autoincrement())
   settingName  String @db.VarChar(128)
-  settingValue String
+  settingValue String @db.Text
 }
 
 model UserNotes {

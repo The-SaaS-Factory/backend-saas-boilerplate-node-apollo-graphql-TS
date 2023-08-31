@@ -4,7 +4,8 @@ export const updateMembership = async (
   client: PrismaClient,
   userId: number,
   planId: number,
-  months: number
+  months: number,
+  freeTrial: boolean
 ) => {
   const currentMemberShip = await client.membership.findFirst({
     where: {
@@ -25,6 +26,7 @@ export const updateMembership = async (
       planId: planId,
       startDate: new Date(),
       endDate: new Date(new Date().setMonth(new Date().getMonth() + months)),
+      endDateFreeTrial: freeTrial ? new Date(new Date().setMonth(new Date().getMonth() + months)) : null
     },
     update: {
       planId: planId,

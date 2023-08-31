@@ -2,25 +2,22 @@ import bcrypt from "bcryptjs";
 import { PrismaClient, Prisma, UserType } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { MovementType } from "../types/MovementsTypes";
-
 import { withFilter } from "graphql-subscriptions";
-
 import { newMovement } from "../facades/movementsAmounts.js";
 import { sendResetCodeEmail, sendWelcomeEmail } from "../workers/jobs.js";
-
 import { MyContext } from "../types/MyContextInterface";
 import {
   generateSecureResetCode,
   generateUniqueUsername,
   sendNotification,
 } from "../facades/auth.js";
-import { imageKitFacade } from "../facades/imagekit.js";
-import { traslate, traslateForUser } from "../facades/str.js";
+import { traslate } from "../facades/str.js";
 import pubsub from "../facades/pubSubFacade.js";
 import {
   checkSettingAction,
   createDefaultSettingForuser,
-} from "../facades/user.js";
+} from "../facades/userFacade.js";
+import { checkMarketingActionsForNewUser } from "../facades/marketingFacades.js";
 
 const JWT_SECRET = "EN_DIOS_CONFIO_BY_JESUS";
 
@@ -609,6 +606,8 @@ const resolvers = {
 
         //Configure Setting By default
         createDefaultSettingForuser(user);
+        //Marketing actions on register
+        checkMarketingActionsForNewUser(user);
 
         if (user) {
           const userForToken = {

@@ -96,6 +96,8 @@ type Query {
     ): [User],
     getSuperAdminSettings: [SuperAdminSettingType],
     getPaymentsSettings: [SuperAdminSettingType],
+    getSocialMediaLinks: [SuperAdminSettingType],
+    getPlatformGeneralData: [SuperAdminSettingType],
     getLanguages: [Language],
     getPermissions: [Permission],
     getRoles: [Role],
@@ -221,6 +223,41 @@ const resolvers = {
               "QVAPAY_MODE",
               "STRIPE_CLIENT_ENABLED",
               "STRIPE_MODE",
+              "STRIPE_CLIENT_PK_PRODUCTION",
+              "STRIPE_CLIENT_PK_SANDBOX",
+            ],
+          },
+        },
+      });
+
+      return settings;
+    },
+    getSocialMediaLinks: async (root: any, args: {}, context: MyContext) => {
+      const settings = await prisma.superAdminSetting.findMany({
+        where: {
+          settingName: {
+            in: [
+              "LINK_FACEBOOK",
+              "LINK_INSTAGRAM",
+              "LINK_TWITTER",
+              "LINK_GITHUB",
+              "LINK_YOUTUBE",
+            ],
+          },
+        },
+      });
+
+      return settings;
+    },
+    getPlatformGeneralData: async (root: any, args: {}, context: MyContext) => {
+      const settings = await prisma.superAdminSetting.findMany({
+        where: {
+          settingName: {
+            in: [
+              "PLATFORM_NAME",
+              "PLATFORM_FAVICON",
+              "PLATFORM_LOGO",
+              "PLATFORM_RESUME",
             ],
           },
         },

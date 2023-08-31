@@ -163,14 +163,6 @@ payments.post("/create-checkout-stripe", async (req, res) => {
     console.log(error);
   }
 });
-payments.post("/create-stripe-subscription", async (req, res) => {
-  try {
-    const response = await stripeCreateSuscriptionApi(req.body);
-    res.status(200).send(response);
-  } catch (error) {
-    console.log(error);
-  }
-});
 
 payments.post(
   "/stripe/webhook",
