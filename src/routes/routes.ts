@@ -2,8 +2,9 @@ import express from "express";
 import webpush from "web-push";
 
 import {
-  migrateDbSeedAdminUser,
-  migrateDbSeedLanguageAndCurrency,
+  migrateSeedStepOne,
+  migrateSeedStepThree,
+  migrateSeedStepTwo,
 } from "../../prisma/seed.js";
 import bodyParser from "body-parser";
 import { imageKitFacade } from "../facades/imagekitFacade.js";
@@ -64,11 +65,27 @@ router.post("/subscribe", (req, res) => {
     .catch((err) => console.error(err));
 });
 
-router.get("/migrate", (req, res) => {
+router.get("/migrate/1", async (req, res) => {
   try {
-    migrateDbSeedLanguageAndCurrency();
-    migrateDbSeedAdminUser();
-    return "ok";
+    await migrateSeedStepOne();
+    res.status(200).json('ok');
+  } catch (error) {
+    console.log(error);
+  }
+});
+router.get("/migrate/2", async (req, res) => {
+  try {
+    await migrateSeedStepTwo();
+    res.status(200).json('ok');
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/migrate/3", async (req, res) => {
+  try {
+    await migrateSeedStepThree();
+    res.status(200).json('ok');
   } catch (error) {
     console.log(error);
   }

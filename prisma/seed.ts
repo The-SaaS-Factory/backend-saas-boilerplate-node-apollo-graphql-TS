@@ -7,26 +7,22 @@ const rols = [
   {
     name: "superadmin",
     description: "",
-    permissions: ["admin_user_crud", "user_profile_update_cover"],
   },
   {
     name: "marketing",
     description: "",
-    permissions: ["admin_user_crud", "user_profile_update_cover"],
   },
   {
     name: "economy",
     description: "",
-    permissions: ["admin_user_crud", "user_profile_update_cover"],
   },
   {
     name: "support",
     description: "",
-    permissions: ["admin_user_crud"],
   },
 ];
 
-export async function migrateDbSeedLanguageAndCurrency() {
+export async function migrateSeedStepOne() {
   await prisma.language.create({
     data: {
       name: "Spanish",
@@ -52,10 +48,13 @@ export async function migrateDbSeedLanguageAndCurrency() {
       rate: 1,
     },
   });
-}
- 
 
-export async function migrateDbSeedAdminUser() {
+  await prisma.role.createMany({
+    data: rols,
+  });
+}
+
+export async function migrateSeedStepTwo() {
   const hashedPassword = await bcrypt.hash("123456789", 10);
 
   await prisma.user.create({
@@ -64,18 +63,17 @@ export async function migrateDbSeedAdminUser() {
       name: "admin",
       email: "admin@admin.com",
       password: hashedPassword,
+      UserRole: {
+        connect: {
+          id: 1,
+        },
+      },
     },
   });
-
-  await prisma.userRole.create({
-    data: {
-      userId: 1,
-      roleId: 1,
-    },
-  });
+   
 }
 
-export async function migrateFrontendComponentsByDefault() {
+export async function migrateSeedStepThree() {
   const components = [
     {
       name: "Hero",
