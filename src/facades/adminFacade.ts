@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const generateKpi = async () => {
-  //user_count_total
+
   await prisma.adminKpi.create({
     data: {
       name: "user_count_total",
@@ -11,7 +11,6 @@ export const generateKpi = async () => {
     },
   });
 
-  //user_count_total
   await prisma.adminKpi.create({
     data: {
       name: "post_count_total",
@@ -20,7 +19,6 @@ export const generateKpi = async () => {
     },
   });
 
-  //memberships_actived_count_total
   await prisma.adminKpi.create({
     data: {
       name: "memberships_actived_count_total",

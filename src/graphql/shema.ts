@@ -4,17 +4,9 @@ import {
   resolvers as EconomyResolvers,
 } from "./economy.js";
 import {
-  typeDefs as CommunityTypes,
-  resolvers as CommunityResolvers,
-} from "./community.js";
-import {
   typeDefs as InvoiceTypes,
   resolvers as InvoiceResolvers,
 } from "./invoices.js";
-import {
-  typeDefs as ConversationTypes,
-  resolvers as ConversationResolvers,
-} from "./messages.js";
 import {
   typeDefs as MembershipTypes,
   resolvers as MembershipResolvers,
@@ -23,10 +15,7 @@ import {
   typeDefs as CurrenciesTypes,
   resolvers as CurrenciesResolvers,
 } from "./currencies.js";
-import {
-  typeDefs as PublicationTypes,
-  resolvers as PublicationResolvers,
-} from "./publications.js";
+ 
 import {
   typeDefs as AdministrationTypes,
   resolvers as AdministrationResolvers,
@@ -42,25 +31,18 @@ const typeDefs = [
   RootQuery,
   EconomyTypes,
   MembershipTypes,
-  CommunityTypes,
   UsersTypes,
   InvoiceTypes,
   CurrenciesTypes,
-  PublicationTypes,
-
   AdministrationTypes,
-  ConversationTypes,
 ];
 const resolvers = [
   UserResolvers,
   EconomyResolvers,
   MembershipResolvers,
-  PublicationResolvers,
   InvoiceResolvers,
-  CommunityResolvers,
   CurrenciesResolvers,
   AdministrationResolvers,
-  ConversationResolvers,
 ];
 
 export { typeDefs, resolvers };

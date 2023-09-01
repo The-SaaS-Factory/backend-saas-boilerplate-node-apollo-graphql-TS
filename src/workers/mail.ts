@@ -1,56 +1,62 @@
 import nodemailer from "nodemailer";
-import { env } from "process";
+import { getSuperAdminSetting } from "../facades/adminFacade.js";
 
-// async..await is not allowed in global scope, must use a wrapper
 export const sendMail = async (
   email: string,
   html: string,
   subject: string
 ): Promise<void> => {
   try {
-    // create reusable transporter object using the default SMTP transport
-    //Use test o prod credential by env.mode
     let transporter = null;
-   
-    
-    if (env.EMAIL_MODE === "test") {
+    const SMTP_MODE = await getSuperAdminSetting("SMTP_MODE");
+
+    if (SMTP_MODE === "test") {
+      const SMTP_HOST_TEST = await getSuperAdminSetting("SMTP_HOST_TEST");
+      const SMTP_PORT_TEST = await getSuperAdminSetting("SMTP_PORT_TEST");
+      const SMTP_USER_TEST = await getSuperAdminSetting("SMTP_USER_TEST");
+      const SMTP_PASSWORD_TEST = await getSuperAdminSetting(
+        "SMTP_PASSWORD_TEST"
+      );
       transporter = nodemailer.createTransport({
-        host: env.SMTP_HOST_TEST,
-        port: env.SMTP_PORT_TEST,
+        host: SMTP_HOST_TEST,
+        port: SMTP_PORT_TEST,
         auth: {
-          user: env.SMTP_USER_TEST,
-          pass: env.SMTP_PASSWORD_TEST, // naturally, replace both with your real credentials or an application-specific password
+          user: SMTP_USER_TEST,
+          pass: SMTP_PASSWORD_TEST,  
         },
       });
     } else {
-      //Habilitar por tls
+      const SMTP_HOST = await getSuperAdminSetting("SMTP_HOST");
+      const SMTP_PORT = await getSuperAdminSetting("SMTP_PORT");
+      const SMTP_USER = await getSuperAdminSetting("SMTP_USER");
+      const SMTP_PASSWORD = await getSuperAdminSetting("SMTP_PASSWORD");
+
       transporter = nodemailer.createTransport({
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-        secure: true,  
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: true,
         auth: {
-          user: env.SMTP_USER,
-          pass: env.SMTP_PASSWORD, // naturally, replace both with your real credentials or an application-specific password
+          user: SMTP_USER,
+          pass: SMTP_PASSWORD,
         },
       });
     }
 
- 
-    // send mail with defined transport object
+    const SMTP_SENDER_ADDRESS = await getSuperAdminSetting(
+      "SMTP_SENDER_ADDRESS"
+    );
+    const PLATFORM_NAME = await getSuperAdminSetting("PLATFORM_NAME");
+
     let info = await transporter.sendMail({
-      from: '"Creo Red" <info@creo.red>', // sender address #777
-      to: email, // list of receivers
-      subject: subject, // Subject line
-      // text: "Hello world?", // plain text body
-      html: html, // html body
+      from: `"${PLATFORM_NAME}" ${SMTP_SENDER_ADDRESS}`,
+      to: email,
+      subject: subject,
+      html: html,
     });
 
     console.log("Message sent: %s", info.messageId);
-    // Message sent: <b658f8ca-6296-ccf4-8306-87d57a0b4321@example.com>
-
-    // Preview only available when sending through an Ethereal account
     console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
-    // Preview URL: https://ethereal.email/message/WaQKMgKddxQDoou...
+    
   } catch (error) {
     console.log(error);
   }

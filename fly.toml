@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for creoserver on 2023-07-15T20:33:33-03:00
+# fly.toml app configuration file generated for saas on 2023-07-15T20:33:33-03:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = "creoserver"
+app = "saas"
 primary_region = "gru"
 
 [build]

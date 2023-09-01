@@ -1,9 +1,5 @@
 import {
-  Invoice,
-  InvoicePayload,
-  Plan,
   PrismaClient,
-  User,
 } from "@prisma/client";
 import {
   stripeCreateCustomer,
@@ -15,9 +11,7 @@ import { getSuperAdminSetting } from "./adminFacade.js";
 import Stripe from "stripe";
 import { SettingType } from "../types/User.js";
 import { InvoiceType } from "../types/paymentsTypes.js";
-import { MovementType } from "../types/MovementsTypes.js";
-import { newMovement } from "./movementsAmounts.js";
-import { updateMembership } from "./membership.js";
+import { updateMembership } from "./membershipFacade.js";
 
 const prisma = new PrismaClient();
 export const createPaymentsServicesByDefault = async (serviceName: string) => {
@@ -125,14 +119,12 @@ export const createStripeSubscription = async (
         paymentMethod,
       };
 
-      console.log(customerPayload);
       
       const customer = await stripeCreateCustomer(customerPayload);
       if (customer) {
         customerId = customer.id;
       }
 
-      //Save Customer
       await prisma.userSetting.create({
         data: {
           settingName: "STRIPE_CUSTUMER_IR",
@@ -216,24 +208,6 @@ export const updateInvoice = async (invoiceId: number, payload) => {
       data: payload,
     })
     .catch((e) => console.log(e));
-};
-
-export const stripeEventBuyCredit = async (eventData) => {
-  let payload: MovementType = {
-    amount: eventData.metadata?.creditAmount
-      ? parseInt(eventData.metadata?.creditAmount)
-      : 1,
-    model: "USER",
-    modelId: eventData.metadata?.userId
-      ? parseInt(eventData.metadata?.userId)
-      : 0,
-    details: "Add credit",
-    currencyId: 1,
-    type: "CREDIT",
-    status: "COMPLETED",
-  };
-
-  await newMovement(prisma, payload);
 };
 
 export const stripeEventInvoicePaid = async (eventData) => {

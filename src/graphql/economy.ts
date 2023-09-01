@@ -1,10 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-
 const prisma = new PrismaClient();
-
 import { MyContext } from "../types/MyContextInterface";
-import { MovementType } from "../types/MovementsTypes";
-import { newMovement } from "../facades/movementsAmounts.js";
 
 const typeDefs = `#graphql
 

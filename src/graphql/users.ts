@@ -3,15 +3,14 @@ import { PrismaClient, Prisma, UserType } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { MovementType } from "../types/MovementsTypes";
 import { withFilter } from "graphql-subscriptions";
-import { newMovement } from "../facades/movementsAmounts.js";
 import { sendResetCodeEmail, sendWelcomeEmail } from "../workers/jobs.js";
 import { MyContext } from "../types/MyContextInterface";
 import {
   generateSecureResetCode,
   generateUniqueUsername,
   sendNotification,
-} from "../facades/auth.js";
-import { traslate } from "../facades/str.js";
+} from "../facades/authFacade.js";
+import { traslate } from "../facades/strFacade.js";
 import pubsub from "../facades/pubSubFacade.js";
 import {
   checkSettingAction,
@@ -197,14 +196,6 @@ type Avatar {
     updateUser(email: String,username: String, name: String, resume: String, password: String,avatar: String, cover: String,avatar_thumbnail: String, phone: String, country: String, state:String, city:String, type:String,languageId: Int): User
     followUser(
       followingId: Int!
-    ): Boolean
-    makeMovementAmount(
-      amount: Float!
-      currencyId: Int!
-      type: String!
-      model: String!
-      modelId: Int!
-      details: String!
     ): Boolean
     saveSetting(
       settingName: String!
@@ -433,37 +424,7 @@ const resolvers = {
     },
   },
   Mutation: {
-    makeMovementAmount: async (
-      root: any,
-      args: {
-        amount: number;
-        currencyId: number;
-        type: string;
-        model: string;
-        modelId: number;
-        details: string;
-      },
-      MyContext
-    ) => {
-      try {
-        const movement: MovementType = {
-          amount: args.amount,
-          currencyId: args.currencyId,
-          type: args.type === "CREDIT" ? "CREDIT" : "DEBIT",
-          model: args.model,
-          modelId: args.modelId,
-          details: args.details,
-          status: "COMPLETED",
-        };
-
-        await newMovement(prisma, movement);
-
-        return true;
-      } catch (error) {
-        console.log(error);
-        return false;
-      }
-    },
+  
     login: async (
       root: any,
       args: { email: Prisma.StringFilter; password: string }
@@ -606,8 +567,7 @@ const resolvers = {
               type: "CREDIT",
               status: "COMPLETED",
             };
-
-            await newMovement(tx, redwardByRefer);
+           
           }
         }
 

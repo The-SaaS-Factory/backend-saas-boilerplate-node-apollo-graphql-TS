@@ -58,6 +58,7 @@ model User {
   CommunityMembers           CommunityMembers[]
   invoices                   Invoice[]
   UserCapabilities           UserCapabilities[]
+  SupportTicket              SupportTicket[]
 
   @@index([typeId, languageId])
 }
@@ -186,7 +187,7 @@ model Plan {
   id               Int                @id @default(autoincrement())
   name             String
   type             String
-  description      String?   @db.Text
+  description      String?            @db.Text
   price            Float
   Membership       Membership[]
   Permission       PlanPermission[]
@@ -255,8 +256,8 @@ model Permission {
 model Capabilitie {
   id               Int                @id @default(autoincrement())
   name             String
-  description      String?   @db.Text
-  type             String   @default("LIMIT") 
+  description      String?            @db.Text
+  type             String             @default("LIMIT")
   PlanCapabilities PlanCapabilities[]
   UserCapabilities UserCapabilities[]
 }
@@ -496,6 +497,31 @@ model MarketingEmailListsMembers {
   userId Int?
 
   @@index([email, listId, userId])
+}
+
+model SupportTicket {
+  id          Int                     @id @default(autoincrement())
+  subject     String
+  departament SupportDepartamentType  @default(SALES)
+  status      SupportDepartamentType  @default(OPEN)
+  userId      Int
+  User        User?                   @relation(fields: [userId], references: [id])
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  @@index([userId])
+}
+
+enum SupportDepartamentType {
+  OPEN
+  SALES
+  SUPPORT
+}
+
+enum SupportTicketStatusType {
+  BILLING
+  SALES
+  SUPPORT
 }
 
 enum MarketingEmailListType {

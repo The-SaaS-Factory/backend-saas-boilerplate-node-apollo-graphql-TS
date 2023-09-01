@@ -1,7 +1,8 @@
 import { PrismaClient, User } from "@prisma/client";
 import { SettingType } from "../types/User";
-import { updateUserInEmailList } from "./marketing.js";
-
+import { updateUserInEmailList } from "./marketingFacade.js";
+import jwt from "jsonwebtoken";
+import { env } from "process";
 const prisma = new PrismaClient();
 
 export async function checkSettingAction(setting: SettingType) {
@@ -39,3 +40,23 @@ export async function createDefaultSettingForuser(user: User) {
 
   checkSettingAction(newPlatformNotification);
 }
+
+
+ 
+
+
+export const getUser = async (token: any) => {
+  try {
+    if (token) {
+      const decodedToken: any = jwt.verify(token, env.JWT_SECRET) as any;
+      const user = await prisma.user.findUnique({
+        where: { id: decodedToken.id },
+      });
+
+      return user;
+    } else {
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};

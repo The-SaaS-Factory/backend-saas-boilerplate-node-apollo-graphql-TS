@@ -1,9 +1,6 @@
 import Stripe from "stripe";
-import { PrismaClient } from "@prisma/client";
 import { getSuperAdminSetting } from "./adminFacade.js";
-
-const prisma = new PrismaClient();
-//Stripe
+import { stripeEventInvoicePaid } from "./paymentFacade.js";
 
 const makeStripeClient = async () => {
   const stripeMode = await getSuperAdminSetting("STRIPE_MODE");
@@ -20,6 +17,38 @@ const makeStripeClient = async () => {
       : STRIPE_CLIENT_SECRET_SANDBOX;
 
   return new Stripe(stripeSectret, { apiVersion: "2022-11-15" });
+};
+
+export const stripeWebhook = async (requestBody, response) => {
+  const stripe = await makeStripeClient();
+  const payload = requestBody;
+  const endpointSecret = await getSuperAdminSetting("STRIPE_ENDPOINT_SECRET");
+
+  const payloadString = JSON.stringify(payload, null, 2);
+  const secret = endpointSecret;
+
+  const header = stripe.webhooks.generateTestHeaderString({
+    payload: payloadString,
+    secret,
+  });
+
+  const event = stripe.webhooks.constructEvent(payloadString, header, secret);
+  const eventData = event.data.object as Stripe.PaymentIntent;
+
+  try {
+    switch (event.type) {
+      case "invoice.paid":
+        await stripeEventInvoicePaid(eventData);
+        break;
+
+      default:
+        break;
+    }
+
+    return response.status(200).send(`OK`);
+  } catch (err) {
+    return response.status(400).send(`Webhook Error: ${err.message}`);
+  }
 };
 
 export const stripeCreateProduct = async (productPayload: any) => {
@@ -61,8 +90,6 @@ export const stripeCreateCustomer = async (customerPayload: any) => {
         default_payment_method: customerPayload.paymentMethod,
       },
     });
-
-     
   } catch (error) {
     throw new Error(error.message);
   }
@@ -75,35 +102,4 @@ export const stripeCreateSuscription = async (
 
   return await stripe.subscriptions.create(subscriptionPayload);
 };
-
-export const stripeCreateSuscriptionApi = async (
-  createSubscriptionRequest: any
-) => {
-//   const stripe = await makeStripeClient();
-
-//   const priceId = createSubscriptionRequest.priceId;
-//   const payload: Stripe.SubscriptionCreateParams = {
-//     customer: customer.id,
-//     items: [{ price: priceId }],
-//     payment_settings: {
-//       payment_method_options: {
-//         card: {
-//           request_three_d_secure: "any",
-//         },
-//       },
-//       payment_method_types: ["card"],
-//       save_default_payment_method: "on_subscription",
-//     },
-//     expand: ["latest_invoice.payment_intent"],
-//   };
-
-//   console.log(payload);
-
-//   const subscription: any = await stripe.subscriptions.create(payload);
-
-//   // return the client secret and subscription id
-//   return {
-//     clientSecret: subscription.latest_invoice.payment_intent.client_secret,
-//     subscriptionId: subscription.id,
-//   };
-};
+ 

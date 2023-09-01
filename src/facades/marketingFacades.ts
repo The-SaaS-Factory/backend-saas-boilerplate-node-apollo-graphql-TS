@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { updateMembership } from "./membership.js";
+import { updateMembership } from "./membershipFacade.js";
 
 const prisma = new PrismaClient();
 export const checkMarketingActionsForNewUser = async (user) => {

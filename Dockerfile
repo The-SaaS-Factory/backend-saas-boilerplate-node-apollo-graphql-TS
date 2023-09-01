@@ -10,10 +10,6 @@ COPY package*.json ./
 # Install project dependencies
 RUN npm install
 
-RUN npm install pm2 -g
-ENV PM2_PUBLIC_KEY hxdoddp5kn5syl9
-ENV PM2_SECRET_KEY vzpf6dgxe2u22mr
-
 
 # Copy the project files to the container
 COPY . .

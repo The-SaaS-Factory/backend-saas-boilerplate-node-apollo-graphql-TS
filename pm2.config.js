@@ -1,7 +1,7 @@
 module.exports = {
     apps: [
         {
-            name: 'creoserver',
+            name: 'server',
             script: './dist/index.js',
         },
     ],
