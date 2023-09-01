@@ -24,5 +24,5 @@ RUN npm run build
 EXPOSE 8080
 
 # Start the application
-CMD ["pm2-runtime", "./dist/src/index.js"]
+CMD ["node", "./dist/src/index.js"]
  

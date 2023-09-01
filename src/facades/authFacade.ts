@@ -1,12 +1,11 @@
 import { PubSub } from "graphql-subscriptions";
-import { sendInternalNotificatoin } from "../workers/jobs.js";
 import { convertToSlug } from "./strFacade.js";
-import pubsub from "./pubSubFacade.js";
+import { sendInternalNotificatoin } from "./notificationFacade.js";
 
 export function generateSecureResetCode() {
-  const codeLength = 7; 
+  const codeLength = 7;
   const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; 
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let code = "";
   for (let i = 0; i < codeLength; i++) {
     code += characters.charAt(Math.floor(Math.random() * characters.length));
@@ -38,7 +37,6 @@ export const generateUniqueUsername = async (tx, name) => {
 
   return username;
 };
-
 
 export const sendNotification = async (
   typeNotification: string,

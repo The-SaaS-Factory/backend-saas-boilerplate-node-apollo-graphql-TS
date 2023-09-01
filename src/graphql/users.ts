@@ -3,7 +3,6 @@ import { PrismaClient, Prisma, UserType } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { MovementType } from "../types/MovementsTypes";
 import { withFilter } from "graphql-subscriptions";
-import { sendResetCodeEmail, sendWelcomeEmail } from "../workers/jobs.js";
 import { MyContext } from "../types/MyContextInterface";
 import {
   generateSecureResetCode,
@@ -17,6 +16,7 @@ import {
   createDefaultSettingForuser,
 } from "../facades/userFacade.js";
 import { checkMarketingActionsForNewUser } from "../facades/marketingFacades.js";
+import { sendResetCodeEmail, sendWelcomeEmail } from "../facades/mailFacade.js";
 
 const JWT_SECRET = "EN_DIOS_CONFIO_BY_JESUS";
 
