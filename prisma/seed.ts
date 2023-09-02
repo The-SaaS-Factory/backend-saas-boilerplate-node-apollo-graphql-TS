@@ -29,20 +29,8 @@ async function main() {
       },
     });
 
-    const lngs = await tx.language.findMany();
-
-    frontendComponents.map(async (component) => {
-      const payload = lngs.map(async (lng: any) => {
-        const payload = {
-          name: component.name,
-          data: component.data,
-          type: component.type,
-          languageId: lng.id,
-        };
-        await tx.frontendComponent.createMany({
-          data: payload,
-        });
-      });
+    await tx.frontendComponent.createMany({
+      data: frontendComponents,
     });
   });
 }
