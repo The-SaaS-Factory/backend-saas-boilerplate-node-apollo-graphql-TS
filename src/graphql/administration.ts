@@ -1,6 +1,6 @@
 import { createPaymentsServicesByDefault } from "../facades/paymentFacade.js";
 import { MyContext } from "../types/MyContextInterface";
-import { Prisma, PrismaClient, UserType } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -94,12 +94,6 @@ const typeDefs = `#graphql
 
 
 type Query {
-    getAdminUsers(
-      offset: Int,
-      limit: Int,
-      type: String,
-      search: String
-    ): [User],
     getSuperAdminSettings: [SuperAdminSettingType],
     getPaymentsSettings: [SuperAdminSettingType],
     getSocialMediaLinks: [SuperAdminSettingType],
@@ -149,72 +143,7 @@ type Mutation {
 
 const resolvers = {
   Query: {
-    getAdminUsers: async (
-      root: any,
-      args: { offset: any; limit: any; type: UserType; search: string },
-      context: MyContext
-    ) => {
-      let typeSelected: Prisma.UserWhereInput;
-
-      typeSelected = {};
-
-      if (args.search) {
-        typeSelected = {
-          OR: [
-            {
-              username: {
-                contains: args.search,
-              },
-              name: {
-                contains: args.search,
-              },
-            },
-          ],
-        };
-      }
-
-      const users = await prisma.user.findMany({
-        where: {
-          type: args.type,
-          ...typeSelected, // Combina el filtro de búsqueda con el filtro de tipo
-        },
-        include: {
-          refer: {
-            include: {
-              refer: {
-                select: {
-                  username: true,
-                  avatar: true,
-                  country: true,
-                  state: true,
-                  city: true,
-                },
-              },
-            },
-          },
-          UserStatus: true,
-          Membership: {
-            select: {
-              endDate: true,
-            },
-          },
-          Language: true,
-          UserSetting: true,
-          amounts: {
-            include: {
-              currency: true,
-            },
-          },
-          _count: {
-            select: {
-              refer: true,
-            },
-          },
-        },
-      });
-
-      return users;
-    },
+    
     getSuperAdminSettings: async (root: any, args: {}, context: MyContext) => {
       const settings = await prisma.superAdminSetting.findMany({});
 
