@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { env } from "process";
 
 
-export const JWT_SECRET="SAAS_FACTORY_RANDOM_154SHJKWGB##@"
+ 
 
 const prisma = new PrismaClient();
 
@@ -54,7 +54,7 @@ export async function createDefaultSettingForuser(user: User) {
 export const getUser = async (token: any) => {
   try {
     if (token) {
-      const decodedToken: any = jwt.verify(token, JWT_SECRET);
+      const decodedToken: any = jwt.verify(token, env.JWT_SECRET);
       console.log(decodedToken);
       
       const user = await prisma.user.findUnique({

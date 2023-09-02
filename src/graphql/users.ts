@@ -12,12 +12,12 @@ import {
 import { traslate } from "../facades/strFacade.js";
 import pubsub from "../facades/pubSubFacade.js";
 import {
-  JWT_SECRET,
   checkSettingAction,
   createDefaultSettingForuser,
 } from "../facades/userFacade.js";
 import { checkMarketingActionsForNewUser } from "../facades/marketingFacades.js";
 import { sendResetCodeEmail, sendWelcomeEmail } from "../facades/mailFacade.js";
+import { env } from "process";
 
 
 const prisma = new PrismaClient();
@@ -378,7 +378,7 @@ const resolvers = {
         id: user.id,
       };
 
-      return { token: jwt.sign(userForToken, JWT_SECRET), user: user };
+      return { token: jwt.sign(userForToken, env.JWT_SECRET), user: user };
     },
 
     createUser: async (root: any, args: any, { prisma }) => {
@@ -471,7 +471,7 @@ const resolvers = {
 
           sendWelcomeEmail(user);
           return {
-            token: jwt.sign(userForToken, JWT_SECRET, {
+            token: jwt.sign(userForToken, env.JWT_SECRET, {
               expiresIn: "7d",
             }),
             user: user,
