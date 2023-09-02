@@ -9,27 +9,27 @@ const prisma = new PrismaClient();
 
 async function main() {
   prisma.$transaction(async (tx) => {
-    await prisma.role.createMany({
+    await tx.role.createMany({
       data: rols,
     });
 
-    prisma.adminCurrencies.createMany({
+    tx.adminCurrencies.createMany({
       data: currencies,
     });
-    prisma.user.createMany({
+    tx.user.createMany({
       data: users,
     });
-    await prisma.language.createMany({
+    await tx.language.createMany({
       data: languages,
     });
-    prisma.userRole.create({
+    tx.userRole.create({
       data: {
         userId: 1,
         roleId: 1,
       },
     });
 
-    const lngs = await prisma.language.findMany();
+    const lngs = await tx.language.findMany();
 
     frontendComponents.map(async (component) => {
       const payload = lngs.map(async (lng: any) => {
@@ -39,7 +39,7 @@ async function main() {
           type: component.type,
           languageId: lng.id,
         };
-        await prisma.frontendComponent.createMany({
+        await tx.frontendComponent.createMany({
           data: payload,
         });
       });
