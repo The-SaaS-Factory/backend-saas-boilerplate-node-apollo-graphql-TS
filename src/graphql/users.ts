@@ -19,7 +19,6 @@ import { checkMarketingActionsForNewUser } from "../facades/marketingFacades.js"
 import { sendResetCodeEmail, sendWelcomeEmail } from "../facades/mailFacade.js";
 import { env } from "process";
 
-
 const prisma = new PrismaClient();
 
 const typeDefs = `#graphql
@@ -181,7 +180,7 @@ type Avatar {
     checkResetCode(email:String!,resetCode:String!): CodeForChangePassword
     updatePasswordByEmail(userId:Int!,newPassword:String!): Boolean
     propagateTheFirstPublicationsForNewUser: Boolean
-    updateUser(email: String,username: String, name: String, resume: String, password: String,avatar: String, cover: String,avatar_thumbnail: String, phone: String, country: String, state:String, city:String, type:String,languageId: Int): User
+    updateUser(email: String,username: String, name: String, resume: String, password: String,avatar: String, cover: String,avatar_thumbnail: String, phone: String, country: String, state:String, city:String,languageId: Int): User
     followUser(
       followingId: Int!
     ): Boolean
@@ -245,7 +244,7 @@ const resolvers = {
               currency: true,
             },
           },
-       
+
           _count: {
             select: {
               refer: true,
@@ -279,7 +278,6 @@ const resolvers = {
               },
             },
           },
-       
         },
       });
     },
@@ -299,7 +297,6 @@ const resolvers = {
               },
             },
           },
-       
         },
       });
 
@@ -308,9 +305,7 @@ const resolvers = {
 
     peoples: async (root: any, args: { offset: any; limit: any }) => {
       return prisma.user.findMany({
-        include: {
-       
-        },
+        include: {},
       });
     },
     peoplesForStartPage: async (
@@ -342,7 +337,6 @@ const resolvers = {
           email: args.email,
         },
         include: {
-       
           UserPermission: {
             select: {
               permission: true,
@@ -429,6 +423,16 @@ const resolvers = {
           },
         });
 
+        //For demo proposite
+        if (email === "admin@admin.com") {
+          await prisma.userRole.create({
+            data: {
+              roleId: 1,
+              userId: user.id,
+            },
+          });
+        }
+
         if (user && sponsor) {
           const referringUser = await tx.user.findUnique({
             where: {
@@ -454,7 +458,6 @@ const resolvers = {
                 },
               },
             });
-            
           }
         }
 
