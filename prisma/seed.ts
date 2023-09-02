@@ -8,25 +8,27 @@ import { frontendComponents } from "./seeds/frontendComponents.js";
 const prisma = new PrismaClient();
 
 async function main() {
-  prisma.$transaction([
-    prisma.role.createMany({
+  prisma.$transaction(async (tx) => {
+    await prisma.role.createMany({
       data: rols,
-    }),
+    });
+
     prisma.adminCurrencies.createMany({
       data: currencies,
-    }),
+    });
     prisma.user.createMany({
       data: users,
-    }),
+    });
+    await prisma.language.createMany({
+      data: languages,
+    });
     prisma.userRole.create({
       data: {
         userId: 1,
-        roleId: 1
+        roleId: 1,
       },
-    }),
-  ]);
+    });
 
-  await prisma.$transaction(async (tx) => {
     const lngs = await prisma.language.findMany();
 
     frontendComponents.map(async (component) => {

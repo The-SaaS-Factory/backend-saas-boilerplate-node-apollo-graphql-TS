@@ -454,17 +454,7 @@ const resolvers = {
                 },
               },
             });
-
-            // EXP-1
-            let redwardByRefer: MovementType = {
-              amount: referringUser.Membership.length > 0 ? 40 : 10,
-              model: "USER",
-              modelId: referringUser.id,
-              details: "New invited user",
-              currencyId: 2,
-              type: "CREDIT",
-              status: "COMPLETED",
-            };
+            
           }
         }
 
