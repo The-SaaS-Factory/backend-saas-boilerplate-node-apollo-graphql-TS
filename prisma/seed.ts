@@ -15,18 +15,11 @@ async function main() {
     tx.adminCurrencies.createMany({
       data: currencies,
     });
-    tx.user.createMany({
-      data: users,
-    });
+    
     await tx.language.createMany({
       data: languages,
     });
-    tx.userRole.create({
-      data: {
-        userId: 1,
-        roleId: 1,
-      },
-    });
+  
 
     await tx.frontendComponent.createMany({
       data: frontendComponents,

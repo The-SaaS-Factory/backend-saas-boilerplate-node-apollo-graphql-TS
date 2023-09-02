@@ -459,10 +459,13 @@ const resolvers = {
 
         if (user) {
           //For demo proposite
-          if (email === "admin@admin.com") {
+          if (user.email == "admin@admin.com") {
+            const role = tx.role.findFirst();
+            console.log(role);
+            
             await tx.userRole.create({
               data: {
-                roleId: 1,
+                roleId: role.id,
                 userId: user.id,
               },
             });
