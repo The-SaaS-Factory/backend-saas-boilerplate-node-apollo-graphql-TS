@@ -12,13 +12,13 @@ import {
 import { traslate } from "../facades/strFacade.js";
 import pubsub from "../facades/pubSubFacade.js";
 import {
+  JWT_SECRET,
   checkSettingAction,
   createDefaultSettingForuser,
 } from "../facades/userFacade.js";
 import { checkMarketingActionsForNewUser } from "../facades/marketingFacades.js";
 import { sendResetCodeEmail, sendWelcomeEmail } from "../facades/mailFacade.js";
 
-const JWT_SECRET = "EN_DIOS_CONFIO_BY_JESUS";
 
 const prisma = new PrismaClient();
 

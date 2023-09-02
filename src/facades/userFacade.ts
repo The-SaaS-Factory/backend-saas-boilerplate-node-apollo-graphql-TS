@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { env } from "process";
 
 
-const JWT_SECRET="SAAS_FACTORY_RANDOM_154SHJKWGB##@"
+export const JWT_SECRET="SAAS_FACTORY_RANDOM_154SHJKWGB##@"
 
 const prisma = new PrismaClient();
 
