@@ -500,14 +500,14 @@ model MarketingEmailListsMembers {
 }
 
 model SupportTicket {
-  id          Int                     @id @default(autoincrement())
+  id          Int                    @id @default(autoincrement())
   subject     String
-  departament SupportDepartamentType  @default(SALES)
-  status      SupportDepartamentType  @default(OPEN)
+  departament SupportDepartamentType @default(SALES)
+  status      SupportDepartamentType @default(OPEN)
   userId      Int
-  User        User?                   @relation(fields: [userId], references: [id])
-  createdAt   DateTime                @default(now())
-  updatedAt   DateTime                @updatedAt
+  User        User?                  @relation(fields: [userId], references: [id])
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
 
   @@index([userId])
 }

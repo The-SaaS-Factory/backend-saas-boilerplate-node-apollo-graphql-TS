@@ -1,7 +1,10 @@
 import nodemailer from "nodemailer";
 import { getSuperAdminSetting } from "../facades/adminFacade.js";
 import fs from "fs";
- 
+import { PrismaClient } from "@prisma/client";
+import Handlebars from "handlebars";
+const prisma = new PrismaClient();
+
 export const sendMail = async (
   email: string,
   html: string,
@@ -23,7 +26,7 @@ export const sendMail = async (
         port: SMTP_PORT_TEST,
         auth: {
           user: SMTP_USER_TEST,
-          pass: SMTP_PASSWORD_TEST,  
+          pass: SMTP_PASSWORD_TEST,
         },
       });
     } else {
@@ -57,75 +60,77 @@ export const sendMail = async (
 
     console.log("Message sent: %s", info.messageId);
     console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
-    
   } catch (error) {
     console.log(error);
   }
 };
 
 export const sendWelcomeEmail = async (user: any): Promise<void> => {
-    const job = {
-      emailType: "welcomeEmailBasic",
-      user: user,
-    };
-  
-    if (job.emailType == "welcomeEmailBasic") {
-      const templateHtml = fs.readFileSync(
-        "./src/templates/emails/client/wellcome.hbs",
-        "utf-8"
-      );
-  
-      let content =
-        "Welcome to Creo.red, a social network designed and created by and for Christians from around the world. Our vision is to connect, edify, and prepare young people for the Great Commission using technology. Share Creo with your friends and help us grow!";
-      const contentEN =
-        "Welcome to Creo.red, a social network designed and created by and for Christians from around the world. Our vision is to connect, edify, and prepare young people for the Great Commission using technology. Share Creo with your friends and help us grow!";
-      const contentES =
-        "Binvenido a Creo.red, una red social pensada y creada por y para cristianos de todo el mundo. Nuestra visión es conectar, edificar y preparar a los jóvenes para la gran comisión usando la tecnología. ¡Comparte Creo con tus amigos y ayudanos a crecer!";
-      const contentPT =
-        "Bem-vindo(a) ao Creo.red, uma rede social pensada e criada por e para cristãos de todo o mundo. Nossa visão é conectar, edificar e preparar os jovens para a grande comissão usando a tecnologia. Compartilhe o Creo com seus amigos e nos ajude a crescer!";
-      let title = "Welcome";
-      const titleEn = "Welcome";
-      const titleEs = "Bienvenid@";
-      const titlePt = "Bem-vindo(a)";
-  
-      if (user.languageId == 1) {
-        content = contentEN;
-        title = titleEn;
-      }
-      if (user.languageId == 2) {
-        content = contentES;
-        title = titlePt;
-      }
-      if (user.languageId == 3) {
-        content = contentPT;
-        title = titlePt;
-      }
-      const template = Handlebars.compile(templateHtml);
-  
-      const html = template({ username: user.name, content: content });
-  
-      sendMail(user.email, html, title);
-    }
+  const job = {
+    emailType: "welcomeEmailBasic",
+    user: user,
   };
 
-  export const sendResetCodeEmail = async (
-    userEmail: string,
-    resetCode: string
-  ): Promise<void> => {
-    const job = {
-      resetCode,
-      userEmail,
-    };
-  
+  if (job.emailType == "welcomeEmailBasic") {
     const templateHtml = fs.readFileSync(
-      "./src/templates/emails/client/resetPasswordEmail.hbs",
+      "./src/templates/emails/client/wellcome.hbs",
       "utf-8"
     );
-  
-    const template = Handlebars.compile(templateHtml);
-  
-    const html = template({ resetCode: job.resetCode });
-  
-    sendMail(job.userEmail, html, "Restaura tu cuenta");
+
+    const language = await prisma.language.findFirst({
+      where: {
+        id: user.languageId,
+      },
+    });
+
+    if (language) {
+      const body = await getSuperAdminSetting(
+        `MARKETING_EMAIL_WELCOME_BODY_${language.lng}`
+      );
+      const subject = await getSuperAdminSetting(
+        `MARKETING_EMAIL_WELCOME_SUBJECT_${language.lng}`
+      );
+      const platformDescription = await getSuperAdminSetting("PLATFORM_RESUME");
+      const platformAddress = await getSuperAdminSetting("PLATFORM_ADDRESS");
+      const platformEmail = await getSuperAdminSetting("PLATFORM_EMAIL");
+      const platformName = await getSuperAdminSetting("PLATFORM_NAME");
+
+      const template = Handlebars.compile(templateHtml);
+
+      const html = template({
+        username: user.name,
+        content: body,
+        platformDescription,
+        platformAddress,
+        platformEmail,
+        platformName,
+        title: subject,
+      });
+
+      sendMail(user.email, html, subject);
+    } else {
+      throw new Error("Welcome Email not send, massage in language not found");
+    }
+  }
+};
+
+export const sendResetCodeEmail = async (
+  userEmail: string,
+  resetCode: string
+): Promise<void> => {
+  const job = {
+    resetCode,
+    userEmail,
   };
-  
+
+  const templateHtml = fs.readFileSync(
+    "./src/templates/emails/client/resetPasswordEmail.hbs",
+    "utf-8"
+  );
+
+  const template = Handlebars.compile(templateHtml);
+
+  const html = template({ resetCode: job.resetCode });
+
+  sendMail(job.userEmail, html, "Restaura tu cuenta");
+};

@@ -424,7 +424,6 @@ const resolvers = {
     },
   },
   Mutation: {
-  
     login: async (
       root: any,
       args: { email: Prisma.StringFilter; password: string }
@@ -567,7 +566,6 @@ const resolvers = {
               type: "CREDIT",
               status: "COMPLETED",
             };
-           
           }
         }
 
@@ -583,7 +581,12 @@ const resolvers = {
           };
 
           sendWelcomeEmail(user);
-          return { token: jwt.sign(userForToken, JWT_SECRET), user: user };
+          return {
+            token: jwt.sign(userForToken, JWT_SECRET, {
+              expiresIn: "7d",
+            }),
+            user: user,
+          };
         }
       });
     },

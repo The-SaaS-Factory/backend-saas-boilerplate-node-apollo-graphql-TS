@@ -1,10 +1,5 @@
 import express from "express";
 import webpush from "web-push";
-
-import {
-  migrateDbSeedAdminUser,
-  migrateDbSeedLanguageAndCurrency,
-} from "../../prisma/seed.js";
 import bodyParser from "body-parser";
 import { imageKitFacade } from "../facades/imagekitFacade.js";
 import { generateRandomString } from "../facades/strFacade.js";
@@ -63,17 +58,6 @@ router.post("/subscribe", (req, res) => {
     .sendNotification(subscription, payload)
     .catch((err) => console.error(err));
 });
-
-router.get("/migrate", (req, res) => {
-  try {
-    migrateDbSeedLanguageAndCurrency();
-    migrateDbSeedAdminUser();
-    return "ok";
-  } catch (error) {
-    console.log(error);
-  }
-});
-
  
 
 export default router;

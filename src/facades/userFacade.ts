@@ -48,7 +48,9 @@ export async function createDefaultSettingForuser(user: User) {
 export const getUser = async (token: any) => {
   try {
     if (token) {
-      const decodedToken: any = jwt.verify(token, env.JWT_SECRET) as any;
+      const decodedToken: any = jwt.verify(token, env.JWT_SECRET);
+      console.log(decodedToken);
+      
       const user = await prisma.user.findUnique({
         where: { id: decodedToken.id },
       });
@@ -57,6 +59,8 @@ export const getUser = async (token: any) => {
     } else {
     }
   } catch (error) {
+    throw new Error("Error with credentials");
+    
     console.log(error);
   }
 };

@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Creo</title>
+    <title>{{title}}</title>
     <style>
       /* Estilos para el encabezado */ header { background: linear-gradient(to
       right, #4a47a3, #643cad); color: #fff; padding: 20px; text-align: center;
@@ -18,11 +18,10 @@
   </head>
   <body>
     <header>
-      <h1>Creo</h1>
-      <p>Connecting lives with Christ</p>
+      <h1>{{platformName}}</h1>
+       
     </header>
 
-    <!-- Contenido principal de la página -->
     <main>
       <div class="welcome">
         <p>{{username}}, {{content}} </p>
@@ -31,30 +30,13 @@
     </main>
 
     <footer>
-      <p>For we are his workmanship, created in Christ Jesus for good works,
-        which God prepared beforehand, that we should walk in them</p>
-        <hr> <br>
-        <p>From Curitiba, Brasil</p>
-        <br>
-        <p>info@creo.red</p>
-      {{! <div class="social-icons">
-        <a href="https://www.facebook.com"><img
-            src="facebook-icon.png"
-            alt="Facebook"
-          /></a>
-        <a href="https://www.twitter.com"><img
-            src="twitter-icon.png"
-            alt="Twitter"
-          /></a>
-        <a href="https://www.instagram.com"><img
-            src="instagram-icon.png"
-            alt="Instagram"
-          /></a>
-        <a href="https://www.tiktok.com"><img
-            src="tiktok-icon.png"
-            alt="TikTok"
-          /></a>
-      </div> }}
+      <p> {{platformDescription}}</p>
+      <hr />
+      <br />
+      <p>{{platformAddress}}</p>
+      <br />
+      <p>{{platformEmail}}</p>
+
     </footer>
   </body>
 </html>
