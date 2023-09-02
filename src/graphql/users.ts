@@ -376,7 +376,8 @@ const resolvers = {
     },
 
     createUser: async (root: any, args: any, { prisma }) => {
-      return await prisma.$transaction(async (tx) => {
+      try {
+          return await prisma.$transaction(async (tx) => {
         const { email, username, password, sponsor, lang } = args;
 
         // Check if email is already taken
@@ -423,16 +424,6 @@ const resolvers = {
           },
         });
 
-        //For demo proposite
-        if (email === "admin@admin.com") {
-          await prisma.userRole.create({
-            data: {
-              roleId: 1,
-              userId: user.id,
-            },
-          });
-        }
-
         if (user && sponsor) {
           const referringUser = await tx.user.findUnique({
             where: {
@@ -467,6 +458,16 @@ const resolvers = {
         checkMarketingActionsForNewUser(user);
 
         if (user) {
+          //For demo proposite
+          if (email === "admin@admin.com") {
+            await tx.userRole.create({
+              data: {
+                roleId: 1,
+                userId: user.id,
+              },
+            });
+          }
+
           const userForToken = {
             username: user.username,
             id: user.id,
@@ -481,6 +482,10 @@ const resolvers = {
           };
         }
       });
+      } catch (error) {
+        throw new Error(error.message);
+      }
+    
     },
     markNotificationsAsRead: async (root: any, args: any, MyContext) => {
       try {
