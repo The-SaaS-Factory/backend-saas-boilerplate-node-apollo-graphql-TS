@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { rols } from "./seeds/rols.js";
-import bcrypt from "bcrypt";
 import { languages } from "./seeds/languages.js";
 import { currencies } from "./seeds/currencies.js";
 import { users } from "./seeds/users.js";
