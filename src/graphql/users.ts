@@ -451,26 +451,11 @@ const resolvers = {
             });
           }
         }
-
-        //Configure Setting By default
-        createDefaultSettingForuser(user);
+         
         //Marketing actions on register
         checkMarketingActionsForNewUser(user);
 
         if (user) {
-          //For demo proposite
-          if (user.email == "admin@admin.com") {
-            const role = tx.role.findFirst();
-            console.log(role);
-            
-            await tx.userRole.create({
-              data: {
-                roleId: role.id,
-                userId: user.id,
-              },
-            });
-          }
-
           const userForToken = {
             username: user.username,
             id: user.id,
