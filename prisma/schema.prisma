@@ -35,7 +35,6 @@ model User {
   createdAt                  DateTime                     @default(now())
   updatedAt                  DateTime                     @updatedAt
   Language                   Language                     @relation(fields: [languageId], references: [id])
-  type                       UserType                     @relation(fields: [typeId], references: [id])
   languageId                 Int                          @default(1)
   Publication                Publication[]
   amounts                    UserAmounts[]
@@ -63,15 +62,7 @@ model User {
   @@index([typeId, languageId])
 }
 
-model UserType {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(56)
-  status    String?  @default("ACTIVE")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  User      User[]
-}
-
+ 
 model FrontendComponent {
   id          Int      @id @default(autoincrement())
   name        String   @db.VarChar(256)

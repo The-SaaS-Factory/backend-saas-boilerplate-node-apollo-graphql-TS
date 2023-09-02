@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { PrismaClient, Prisma, UserType } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { MovementType } from "../types/MovementsTypes";
 import { withFilter } from "graphql-subscriptions";
@@ -38,7 +38,6 @@ type Avatar {
         username: String!
         email: String!
         password: String!
-        type: String!
     }
 
     type CurrencyType {
@@ -52,11 +51,7 @@ type Avatar {
         amount: Float
         currency: CurrencyType
     }
-    type UserType {
-        id: Int,
-        name: String
-        status: String
-    }
+    
     type TournamentRanking {
         points: Float,
     }
@@ -102,7 +97,6 @@ type Avatar {
       avatar_thumbnail: String,
       username:  String!,
       name:  String,
-      type: UserType,
       refer: [Refer],
       amounts: [UserAmount],
       UserSetting: [Setting],
@@ -152,13 +146,7 @@ type Avatar {
 
 
  extend type Query {
-    getUserType: [UserType],
-     getUsersByType(
-      offset: Int,
-      limit: Int,
-      type: String!,
-      search: String
-    ): [User],
+    getUsers: [User],
     peoples(
      offset: Int,
       limit: Int
@@ -188,7 +176,7 @@ type Avatar {
     ): [User],
     markNotificationsAsRead: Boolean
     sendAdminNotification(userId: Int!, type: String, content: String): Notification
-    createUser(username: String!, email: String!,password: String!,type: Int!, sponsor: Int, lang: String): NewUserType
+    createUser(username: String!, email: String!,password: String!, sponsor: Int, lang: String): NewUserType
     forgotPassword(email:String!): Boolean
     checkResetCode(email:String!,resetCode:String!): CodeForChangePassword
     updatePasswordByEmail(userId:Int!,newPassword:String!): Boolean
@@ -216,9 +204,6 @@ type Avatar {
 
 const resolvers = {
   Query: {
-    getUserType: async (root: any, args: any, context: MyContext) => {
-      return await prisma.userType.findMany({});
-    },
     me: (root: any, args: any, context: MyContext) => {
       return prisma.user.findUnique({
         where: { id: context.user.id },
@@ -260,11 +245,7 @@ const resolvers = {
               currency: true,
             },
           },
-          type: {
-            select: {
-              name: true,
-            },
-          },
+       
           _count: {
             select: {
               refer: true,
@@ -285,6 +266,23 @@ const resolvers = {
         throw new Error("Failed to retrieve user notifications");
       }
     },
+    getUsers: async (root: any, args: any) => {
+      return await prisma.user.findMany({
+        include: {
+          Membership: {
+            select: {
+              endDate: true,
+              plan: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+       
+        },
+      });
+    },
     getUser: async (root: any, args: { username: Prisma.StringFilter }) => {
       const user = await prisma.user.findFirst({
         where: {
@@ -301,108 +299,17 @@ const resolvers = {
               },
             },
           },
-          type: {
-            select: {
-              name: true,
-            },
-          },
+       
         },
       });
 
       return user;
     },
-    getUsersByType: async (
-      root: any,
-      args: { offset: any; limit: any; type: string; search: string },
-      context: MyContext
-    ) => {
-      let typeSelected: Prisma.UserWhereInput;
-      const limit = args.limit;
-      const offset = args.offset;
-      typeSelected = {};
 
-      if (args.search) {
-        typeSelected = {
-          OR: [
-            {
-              username: {
-                contains: args.search,
-              },
-              name: {
-                contains: args.search,
-              },
-            },
-          ],
-        };
-      }
-
-      //User for start page
-      if (args.type === "MISC") {
-        const users = await prisma.user.findMany({
-          where: {
-            languageId: context.user.languageId,
-            id: {
-              not: context.user.id,
-            },
-            ...typeSelected, // Combina el filtro de búsqueda con el filtro de tipo
-          },
-          skip: offset,
-          take: limit,
-          include: {
-            Membership: {
-              select: {
-                endDate: true,
-                plan: {
-                  select: {
-                    name: true,
-                  },
-                },
-              },
-            },
-            type: { select: { name: true } },
-          },
-        });
-
-        return users;
-      } else {
-        const users = await prisma.user.findMany({
-          where: {
-            type: {
-              name: args.type,
-            },
-            id: {
-              not: context.user.id,
-            },
-            ...typeSelected, // Combina el filtro de búsqueda con el filtro de tipo
-          },
-          skip: offset,
-          take: limit,
-          include: {
-            Membership: {
-              select: {
-                endDate: true,
-                plan: {
-                  select: {
-                    name: true,
-                  },
-                },
-              },
-            },
-            type: { select: { name: true } },
-          },
-        });
-
-        return users;
-      }
-    },
     peoples: async (root: any, args: { offset: any; limit: any }) => {
       return prisma.user.findMany({
         include: {
-          type: {
-            select: {
-              name: true,
-            },
-          },
+       
         },
       });
     },
@@ -435,11 +342,7 @@ const resolvers = {
           email: args.email,
         },
         include: {
-          type: {
-            select: {
-              name: true,
-            },
-          },
+       
           UserPermission: {
             select: {
               permission: true,
@@ -480,7 +383,7 @@ const resolvers = {
 
     createUser: async (root: any, args: any, { prisma }) => {
       return await prisma.$transaction(async (tx) => {
-        const { email, username, password, type, sponsor, lang } = args;
+        const { email, username, password, sponsor, lang } = args;
 
         // Check if email is already taken
         const existingUser = await tx.user.findFirst({
@@ -519,14 +422,10 @@ const resolvers = {
         const user = await tx.user.create({
           data: {
             email,
-            typeId: type,
             name,
             languageId,
             username: newUserName,
             password: bcrypt.hashSync(password, 10),
-          },
-          include: {
-            type: true,
           },
         });
 
@@ -623,24 +522,11 @@ const resolvers = {
         country: string;
         state: string;
         city: string;
-        type: string;
         languageId?: number;
       },
       MyContext
     ) => {
       try {
-        let typeId = null;
-
-        if (args.type) {
-          const type = await prisma.userType.findFirst({
-            where: {
-              name: args.type,
-            },
-          });
-
-          if (type) typeId = type.id;
-        }
-
         const dataToUpdate: any = {
           email: args.email || MyContext.user.email,
           name: args.name || MyContext.user.name,
@@ -658,7 +544,6 @@ const resolvers = {
           state: args.state || MyContext.user.state,
           city: args.city || MyContext.user.city,
           languageId: args.languageId || MyContext.user.languageId,
-          typeId: typeId || MyContext.user.typeId,
         };
 
         const user = await prisma.user.update({
@@ -675,7 +560,6 @@ const resolvers = {
 
       return null;
     },
-
     forgotPassword: async (root: any, args: { email: string }) => {
       try {
         const user = await prisma.user.findFirst({
