@@ -52,17 +52,14 @@ model User {
   MarketingEmailLists        MarketingEmailLists[]
   MarketingEmailListsMembers MarketingEmailListsMembers[]
   UserNotes                  UserNotes[]
-  Community                  Community[]
-  TimelineCommunity          TimelineCommunity[]
-  CommunityMembers           CommunityMembers[]
   invoices                   Invoice[]
   UserCapabilities           UserCapabilities[]
   SupportTicket              SupportTicket[]
+  SupportTicketMessage       SupportTicketMessage[]
 
   @@index([typeId, languageId])
 }
 
- 
 model FrontendComponent {
   id          Int      @id @default(autoincrement())
   name        String   @db.VarChar(256)
@@ -332,71 +329,23 @@ model Language {
 }
 
 model Publication {
-  id                Int                     @id @default(autoincrement())
-  views             Int                     @default(0)
-  user              User                    @relation(fields: [userId], references: [id])
-  userId            Int
-  scope             String                  @default("PROFILE")
-  parentId          Int?                    @map("parentId")
-  function          PublicationFunctionType @default(POST)
-  type              PublicationType         @default(STATUS)
-  status            PublicationStatus       @default(PUBLISHED)
-  reaction          String?                 @default("Excited")
-  contents          PublicationContent[]
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  comments          Publication[]           @relation("ParentCommentToPublication")
-  parent            Publication?            @relation("ParentCommentToPublication", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  TimelineCommunity TimelineCommunity[]
+  id        Int                     @id @default(autoincrement())
+  views     Int                     @default(0)
+  user      User                    @relation(fields: [userId], references: [id])
+  userId    Int
+  scope     String                  @default("PROFILE")
+  parentId  Int?                    @map("parentId")
+  function  PublicationFunctionType @default(POST)
+  type      PublicationType         @default(STATUS)
+  status    PublicationStatus       @default(PUBLISHED)
+  reaction  String?                 @default("Excited")
+  contents  PublicationContent[]
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  comments  Publication[]           @relation("ParentCommentToPublication")
+  parent    Publication?            @relation("ParentCommentToPublication", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([userId, parentId])
-}
-
-model Community {
-  id            Int                 @id @default(autoincrement())
-  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        Int
-  description   String?
-  requestAccess Boolean             @default(false)
-  name          String              @db.VarChar(255)
-  avatar        String?             @db.VarChar(255)
-  cover         String?             @db.VarChar(255)
-  slug          String              @unique @db.VarChar(255)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  deleteAt      DateTime?
-  timeline      TimelineCommunity[]
-  members       CommunityMembers[]
-
-  @@index([userId])
-}
-
-model CommunityMembers {
-  id          Int       @id @default(autoincrement())
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      Int
-  status      String    @default("ACTIVE")
-  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  communityId Int
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([communityId, userId])
-}
-
-model TimelineCommunity {
-  id            Int         @id @default(autoincrement())
-  community     Community   @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  communityId   Int
-  readed        Boolean     @default(false)
-  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-  publicationId Int
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  User          User?       @relation(fields: [userId], references: [id])
-  userId        Int?
-
-  @@index([communityId, publicationId])
 }
 
 model PublicationContent {
@@ -500,7 +449,34 @@ model SupportTicket {
   createdAt   DateTime               @default(now())
   updatedAt   DateTime               @updatedAt
 
+  SupportTicketMessage SupportTicketMessage[]
+
   @@index([userId])
+}
+
+model SupportTicketMessage {
+  id                          Int                           @id @default(autoincrement())
+  ticketId                    Int
+  userId                      Int
+  ticket                      SupportTicket                 @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user                        User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                   DateTime                      @default(now())
+  updatedAt                   DateTime                      @updatedAt
+  SupportTicketMessageContent SupportTicketMessageContent[]
+
+  @@index([ticketId, userId])
+}
+
+model SupportTicketMessageContent {
+  id        Int                    @id @default(autoincrement())
+  messageId Int
+  type      PublicationContentType @default(TEXT)
+  ticket    SupportTicketMessage   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  content   String                 @db.Text
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  @@index([messageId])
 }
 
 enum SupportDepartamentType {
@@ -510,10 +486,14 @@ enum SupportDepartamentType {
 }
 
 enum SupportTicketStatusType {
-  BILLING
-  SALES
-  SUPPORT
+    OPEN
+    UNDER_REVIEW
+    AWAITING_RESPONSE
+    CLOSED
+    REOPENED
+    CANCELED
 }
+
 
 enum MarketingEmailListType {
   PLATFORM

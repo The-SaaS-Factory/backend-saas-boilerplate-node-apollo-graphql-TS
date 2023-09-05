@@ -20,6 +20,10 @@ import {
   typeDefs as AdministrationTypes,
   resolvers as AdministrationResolvers,
 } from "./administration.js";
+import {
+  typeDefs as SupportTypes,
+  resolvers as SuportResolvers,
+} from "./support.js";
 
 const RootQuery = `
   type Query {
@@ -33,6 +37,7 @@ const typeDefs = [
   MembershipTypes,
   UsersTypes,
   InvoiceTypes,
+  SupportTypes,
   CurrenciesTypes,
   AdministrationTypes,
 ];
@@ -41,6 +46,7 @@ const resolvers = [
   EconomyResolvers,
   MembershipResolvers,
   InvoiceResolvers,
+  SuportResolvers,
   CurrenciesResolvers,
   AdministrationResolvers,
 ];

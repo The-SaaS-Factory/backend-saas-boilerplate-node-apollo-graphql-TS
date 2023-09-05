@@ -1,0 +1,237 @@
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+const typeDefs = `#graphql
+type SupportTicketType {
+    id: Int,
+    subject: String
+    departament: String
+    status: String
+    userId: Int
+    SupportTicketMessage: [SupportTicketMessage]
+    createdAt: String
+    updatedAt: String
+  }
+
+  type SupportTicketMessage {
+    id: Int,
+    userId: Int,
+    SupportTicketMessageContent: [SupportTicketContentType]
+    createdAt: String
+    updatedAt: String
+  }
+
+ type SupportTicketContentType {
+    id: Int,
+    type: String
+    content: String
+    createdAt: String
+    updatedAt: String
+  }
+
+  input SupportTicketContentInput {
+    content: String
+    type: String
+}
+ 
+  extend type Query {
+    getSupportTickets: [SupportTicketType]
+    getSupportTicketsForUser: [SupportTicketType]
+    getSupportTicket(ticketId: Int): SupportTicketType
+  }
+  extend type Mutation {
+    createSupportTicket(
+        subject: String,
+        departament: String,
+        contents:[SupportTicketContentInput]
+    ): SupportTicketType
+    createMessageForSupportTicket(
+        ticketId: Int!,
+        contents:[SupportTicketContentInput]
+    ): SupportTicketMessage
+  }
+  `;
+
+const resolvers = {
+  Query: {
+    getSupportTickets: async (root: any, args: { id: number }) => {
+      return await prisma.supportTicket.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    },
+    getSupportTicketsForUser: async (root: any, args: {}, MyContext) => {
+      return await prisma.supportTicket.findMany({
+        where: {
+          userId: MyContext.user.id,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    },
+    getSupportTicket: async (
+      root: any,
+      args: { ticketId: number },
+      MyContext
+    ) => {
+      const ticket = await prisma.supportTicket.findUnique({
+        where: {
+          id: args.ticketId,
+        },
+        include: {
+          SupportTicketMessage: {
+            include: {
+              SupportTicketMessageContent: true
+            }
+          }
+        }
+      });
+
+      //#Fix ACL
+      if (
+        ticket.userId === MyContext.user.id ||
+        (MyContext.user.UserRole[0] && MyContext.user.UserRole[0].roleId == 1)
+      ) {
+        return ticket;
+      } else {
+        throw new Error("Error 401");
+      }
+    },
+  },
+  Mutation: {
+    createSupportTicket: async (root: any, args: any, MyContext) => {
+      return await prisma.$transaction(
+        async (tx) => {
+          try {
+            const user = MyContext.user;
+
+            //1 - Create the ticket
+            const ticket = await tx.supportTicket.create({
+              data: {
+                User: {
+                  connect: {
+                    id: user.id,
+                  },
+                },
+                subject: args.subject,
+                departament: args.departament,
+              },
+            });
+
+            const firstMessage = await tx.supportTicketMessage.create({
+              data: {
+                ticketId: ticket.id,
+                userId: user.id,
+              },
+            });
+
+            const contents = await Promise.all(
+              args.contents.map(async (content: any) => {
+                let data = content.content;
+
+                return {
+                  messageId: firstMessage.id,
+                  content: data,
+                  type: content.type,
+                };
+              })
+            );
+
+            //2-save the content of the ticket content
+            if (contents) {
+              await tx.supportTicketMessageContent.createMany({
+                data: contents,
+              });
+            }
+
+            return ticket;
+          } catch (error) {
+            console.log(error);
+            throw new Error(error);
+          }
+        },
+        {
+          maxWait: 10000, // default: 2000
+          timeout: 15000, // default: 5000
+        }
+      );
+    },
+    createMessageForSupportTicket: async (root: any, args: any, MyContext) => {
+      return await prisma.$transaction(
+        async (tx) => {
+          try {
+
+
+
+            const user = MyContext.user;
+            
+            const ticket = await prisma.supportTicket.findUnique({
+              where: {
+                id: args.ticketId
+              },
+            })
+
+            let status: any = 'OPEN';
+
+            if(ticket.userId != MyContext.user.id){
+              //Is Admin
+              status = 'AWAITING_RESPONSE';
+            }else{
+              if(ticket.status as string == 'AWAITING_RESPONSE'){
+                status = 'UNDER_REVIEW'
+              }
+            }
+            
+            await prisma.supportTicket.update({
+              where: {
+                id: args.ticketId
+              },
+              data: {
+                status: status
+              }
+            })
+
+            const firstMessage = await tx.supportTicketMessage.create({
+              data: {
+                ticketId: args.ticketId,
+                userId: user.id,
+              },
+            });
+
+            const contents = await Promise.all(
+              args.contents.map(async (content: any) => {
+                let data = content.content;
+
+                return {
+                  messageId: firstMessage.id,
+                  content: data,
+                  type: content.type,
+                };
+              })
+            );
+
+            //2-save the content of the ticket content
+            if (contents) {
+              await tx.supportTicketMessageContent.createMany({
+                data: contents,
+              });
+            }
+
+            return firstMessage;
+          } catch (error) {
+            console.log(error);
+            throw new Error(error);
+          }
+        },
+        {
+          maxWait: 10000, // default: 2000
+          timeout: 15000, // default: 5000
+        }
+      );
+    },
+  },
+};
+
+export { typeDefs, resolvers };
