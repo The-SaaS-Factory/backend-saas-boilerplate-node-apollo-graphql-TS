@@ -1,79 +1,27 @@
 import { PrismaClient, User } from "@prisma/client";
 import { sendMail } from "./mailFacade.js";
 import Handlebars from "handlebars";
- 
+
 import fs from "fs";
+import pubsub from "./pubSubFacade.js";
 
 const prisma = new PrismaClient();
 
-export async function notify(userId: number, type: string) {
-  const user = await prisma.user.findFirst({ where: { id: userId } });
-
-  if (user && type === "newMessage") {
-    const settingEnabled = await prisma.userSetting.findFirst({
-      where: {
-        userId: user.id,
-        settingName: "newMessagesNotification",
-      },
-    });
-
-    if (settingEnabled && settingEnabled.settingValue === "1") {
-      sendNewMessageNotificationAction(user);
-    }
-  }
-}
-
-export async function sendNewMessageNotificationAction(user: User) {
-  //Check last notification send
-  const noteChatNotificationTime = await prisma.userNotes.findFirst({
-    where: {
-      userId: user.id,
-      noteName: "lastTimeNotificationMessageDelivered",
-    },
-  });
-
-  if (noteChatNotificationTime) {
-    const time = new Date(noteChatNotificationTime.noteValue);
-    const currentTime = new Date();
-
-    const timeDiffInMinutes = Math.floor(
-      (currentTime.getTime() - time.getTime()) / (1000 * 60)
-    );
-
-    if (timeDiffInMinutes < 360) {
-      return;
-    }
-  }
-
-  await sendNewMessageNotification(user);
-
-  await prisma.userNotes.create({
-    data: {
-      userId: user.id,
-      noteName: "lastTimeNotificationMessageDelivered",
-      noteValue: new Date().toISOString(),
-    },
-  });
-}
-
 export const sendNewMessageNotification = async (user: any): Promise<void> => {
+  //Example function, not active jet, you can use, bonus!
   const templateHtml = fs.readFileSync(
     "./src/templates/emails/client/newMessageNotification.hbs",
     "utf-8"
   );
 
-  let content =
-    "You have a new private message on Creo. Go now to https://creo.red to see it";
-  const contentEN =
-    "You have a new private message on Creo. Go now to https://creo.red to see it";
-  const contentES =
-    "Tienes un nuevo mensaje privado en Creo. Accede ahora a la https://creo.red para verlo";
-  const contentPT =
-    "Você tem uma nova mensagem privada no Creo. Vá agora para https://creo.red para vê-lo";
+  let content = "Test 1";
+  const contentEN = "Test 1";
+  const contentES = "Prueba 1";
+  const contentPT = "Proba 1";
   let title = "Welcome";
-  const titleEn = "New private message on Creo";
-  const titleEs = "Nuevo mensaje en Creo.red";
-  const titlePt = "Nova mensagem no Creo.red";
+  const titleEn = "New private message ";
+  const titleEs = "Nuevo mensaje ";
+  const titlePt = "Nova mensagem ";
 
   if (user.languageId == 1) {
     content = contentEN;
@@ -96,25 +44,22 @@ export const sendNewMessageNotification = async (user: any): Promise<void> => {
 
 export const sendInternalNotificatoin = async (
   userId: number,
-  type: string,
   content: string,
-  pubsub,
   image?: string
 ): Promise<void> => {
   try {
-    const job = {
+    const payload = {
       userId: userId,
       image: image,
-      type: type,
       content: content,
     };
 
-    const notification = await prisma.notification.create({
+    await prisma.notification.create({
       data: {
-        userId: job.userId,
-        image: job.image ?? "",
-        type: job.type as any,
-        content: job.content,
+        userId: payload.userId,
+        image: payload.image ?? "",
+        type: "ALERT",
+        content: payload.content,
       },
     });
 
@@ -125,13 +70,32 @@ export const sendInternalNotificatoin = async (
       },
     });
 
-    let payload = {
-      userId: job.userId,
+    let payloadSubscription = {
+      userId: payload.userId,
+      content: payload.content,
       notificationsCount: notificationsNotReaded,
     };
 
-    pubsub.publish("NEW_INTERNAL_NOTIFICATION", payload);
+    pubsub.publish("NEW_INTERNAL_NOTIFICATION", payloadSubscription);
   } catch (error) {
     throw new Error(error);
+  }
+};
+
+export const notifyAdmin = async (type: string, content: string) => {
+  const admins = await prisma.user.findMany({
+    where: {
+      UserRole: {
+        some: {
+          roleId: 1,
+        },
+      },
+    },
+  });
+
+  if (type === "INTERNAL") {
+    admins.map((admin) => {
+      sendInternalNotificatoin(admin.id, content);
+    });
   }
 };

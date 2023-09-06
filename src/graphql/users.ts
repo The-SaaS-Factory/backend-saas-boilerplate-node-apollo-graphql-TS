@@ -7,7 +7,6 @@ import { MyContext } from "../types/MyContextInterface";
 import {
   generateSecureResetCode,
   generateUniqueUsername,
-  sendNotification,
 } from "../facades/authFacade.js";
 import { traslate } from "../facades/strFacade.js";
 import pubsub from "../facades/pubSubFacade.js";
@@ -138,26 +137,24 @@ type Avatar {
 }
 
   type NotificationSub {
-  userId: Int,
+  userId: Int
+  content: String
   notificationsCount: Int
   
 }
 
 
  extend type Query {
-    getUsers: [User],
-    peoples(
-     offset: Int,
-      limit: Int
-    ): [User],
-    peoplesForStartPage(
-     offset: Int,
-      limit: Int
-    ): [User],
+ 
     me: User,
     getUser(
      username: String!
-    ): User,
+    ): User, 
+    getUsers(
+      offset: Int,
+      limit: Int,
+      search: String
+    ): [User],
     getUserSetting(userId: Int, settingName: String!): Setting
     getUserNotification(userId: Int): [Notification]
   }
@@ -167,12 +164,7 @@ type Avatar {
       email: String!,
       password: String!
     ): NewUserType,
-    getAdminUsers(
-      offset: Int,
-      limit: Int,
-      type: String,
-      search: String
-    ): [User],
+   
     markNotificationsAsRead: Boolean
     sendAdminNotification(userId: Int!, type: String, content: String): Notification
     createUser(username: String!, email: String!,password: String!, sponsor: Int, lang: String): NewUserType
@@ -265,22 +257,6 @@ const resolvers = {
         throw new Error("Failed to retrieve user notifications");
       }
     },
-    getUsers: async (root: any, args: any) => {
-      return await prisma.user.findMany({
-        include: {
-          Membership: {
-            select: {
-              endDate: true,
-              plan: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      });
-    },
     getUser: async (root: any, args: { username: Prisma.StringFilter }) => {
       const user = await prisma.user.findFirst({
         where: {
@@ -302,17 +278,50 @@ const resolvers = {
 
       return user;
     },
+    getUsers: async (root: any, args: any) => {
+      let typeSelected: Prisma.UserWhereInput;
+      const limit = args.limit;
+      const offset = args.offset;
+      typeSelected = {};
 
-    peoples: async (root: any, args: { offset: any; limit: any }) => {
-      return prisma.user.findMany({
-        include: {},
+      if (args.search) {
+        typeSelected = {
+          OR: [
+            {
+              username: {
+                contains: args.search,
+              },
+              name: {
+                contains: args.search,
+              },
+            },
+          ],
+        };
+      }
+
+      const users = await prisma.user.findMany({
+        where: {
+          ...typeSelected,
+        },
+        skip: offset,
+        take: limit,
+        include: {
+          Membership: {
+            select: {
+              endDate: true,
+              plan: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
       });
-    },
-    peoplesForStartPage: async (
-      root: any,
-      args: { offset: any; limit: any }
-    ) => {
-      return prisma.user.findMany();
+      return users;
     },
     getUserSetting: async (root: any, args: any, context: MyContext) => {
       const userSetting = await prisma.userSetting.findFirst({
@@ -377,103 +386,102 @@ const resolvers = {
 
     createUser: async (root: any, args: any, { prisma }) => {
       try {
-          return await prisma.$transaction(async (tx) => {
-        const { email, username, password, sponsor, lang } = args;
+        return await prisma.$transaction(async (tx) => {
+          const { email, username, password, sponsor, lang } = args;
 
-        // Check if email is already taken
-        const existingUser = await tx.user.findFirst({
-          where: {
-            email,
-          },
-        });
-
-        if (existingUser) {
-          throw new Error("email_registered");
-        }
-
-        const [langBase] = lang ? lang.split("-") : "en";
-
-        let languageId = 1;
-
-        if (lang) {
-          switch (langBase) {
-            case "pt":
-              languageId = 3;
-              break;
-
-            case "es":
-              languageId = 2;
-              break;
-
-            default:
-              languageId = 1;
-              break;
-          }
-        }
-
-        let name = username;
-        let newUserName = await generateUniqueUsername(tx, name);
-
-        const user = await tx.user.create({
-          data: {
-            email,
-            name,
-            languageId,
-            username: newUserName,
-            password: bcrypt.hashSync(password, 10),
-          },
-        });
-
-        if (user && sponsor) {
-          const referringUser = await tx.user.findUnique({
+          // Check if email is already taken
+          const existingUser = await tx.user.findFirst({
             where: {
-              id: sponsor,
-            },
-            include: {
-              Membership: true,
+              email,
             },
           });
 
-          if (referringUser) {
-            const referral = await tx.referral.create({
-              data: {
-                refer: {
-                  connect: {
-                    id: referringUser.id,
-                  },
-                },
-                referred: {
-                  connect: {
-                    id: user.id,
-                  },
-                },
+          if (existingUser) {
+            throw new Error("email_registered");
+          }
+
+          const [langBase] = lang ? lang.split("-") : "en";
+
+          let languageId = 1;
+
+          if (lang) {
+            switch (langBase) {
+              case "pt":
+                languageId = 3;
+                break;
+
+              case "es":
+                languageId = 2;
+                break;
+
+              default:
+                languageId = 1;
+                break;
+            }
+          }
+
+          let name = username;
+          let newUserName = await generateUniqueUsername(tx, name);
+
+          const user = await tx.user.create({
+            data: {
+              email,
+              name,
+              languageId,
+              username: newUserName,
+              password: bcrypt.hashSync(password, 10),
+            },
+          });
+
+          if (user && sponsor) {
+            const referringUser = await tx.user.findUnique({
+              where: {
+                id: sponsor,
+              },
+              include: {
+                Membership: true,
               },
             });
+
+            if (referringUser) {
+              const referral = await tx.referral.create({
+                data: {
+                  refer: {
+                    connect: {
+                      id: referringUser.id,
+                    },
+                  },
+                  referred: {
+                    connect: {
+                      id: user.id,
+                    },
+                  },
+                },
+              });
+            }
           }
-        }
-         
-        //Marketing actions on register
-        checkMarketingActionsForNewUser(user);
 
-        if (user) {
-          const userForToken = {
-            username: user.username,
-            id: user.id,
-          };
+          //Marketing actions on register
+          checkMarketingActionsForNewUser(user);
 
-          sendWelcomeEmail(user);
-          return {
-            token: jwt.sign(userForToken, env.JWT_SECRET, {
-              expiresIn: "7d",
-            }),
-            user: user,
-          };
-        }
-      });
+          if (user) {
+            const userForToken = {
+              username: user.username,
+              id: user.id,
+            };
+
+            sendWelcomeEmail(user);
+            return {
+              token: jwt.sign(userForToken, env.JWT_SECRET, {
+                expiresIn: "7d",
+              }),
+              user: user,
+            };
+          }
+        });
       } catch (error) {
         throw new Error(error.message);
       }
-    
     },
     markNotificationsAsRead: async (root: any, args: any, MyContext) => {
       try {
@@ -625,27 +633,6 @@ const resolvers = {
         throw new Error(
           traslate("UnableToChangePassword", args.userId ? args.userId : 1, {})
         );
-      }
-    },
-    sendAdminNotification: async (
-      root: any,
-      args: { userId: number; content: string; type: string },
-      MyContext
-    ) => {
-      try {
-        //    const translatedHello = traslate("hello", MyContext.user.languageId, { name: "Juan" });
-        const content = args.content;
-
-        await sendNotification(
-          "INTERNAL",
-          args.userId,
-          args.type,
-          content,
-          pubsub,
-          ""
-        );
-      } catch (error) {
-        console.log(error);
       }
     },
     saveSetting: async (

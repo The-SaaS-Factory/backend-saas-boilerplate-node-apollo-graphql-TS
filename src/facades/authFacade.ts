@@ -38,16 +38,4 @@ export const generateUniqueUsername = async (tx, name) => {
   return username;
 };
 
-export const sendNotification = async (
-  typeNotification: string,
-  userId: number,
-  type: string,
-  content: string,
-  pubsub: PubSub,
-  image?: string
-) => {
-  if (typeNotification === "INTERNAL") {
-    //Internal Notification
-    return sendInternalNotificatoin(userId, type, content, pubsub, image);
-  }
-};
+ 

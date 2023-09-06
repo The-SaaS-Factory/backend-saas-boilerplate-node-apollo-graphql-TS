@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { notifyAdmin } from "../facades/notificationFacade.js";
 const prisma = new PrismaClient();
 
 const typeDefs = `#graphql
@@ -11,6 +12,7 @@ type SupportTicketType {
     SupportTicketMessage: [SupportTicketMessage]
     createdAt: String
     updatedAt: String
+   
   }
 
   type SupportTicketMessage {
@@ -18,7 +20,8 @@ type SupportTicketType {
     userId: Int,
     SupportTicketMessageContent: [SupportTicketContentType]
     createdAt: String
-    updatedAt: String
+    updatedAt: String 
+    user: User
   }
 
  type SupportTicketContentType {
@@ -49,6 +52,9 @@ type SupportTicketType {
         ticketId: Int!,
         contents:[SupportTicketContentInput]
     ): SupportTicketMessage
+    closeSupportTicket(
+        ticketId: Int!,
+    ): Boolean
   }
   `;
 
@@ -83,10 +89,29 @@ const resolvers = {
         include: {
           SupportTicketMessage: {
             include: {
-              SupportTicketMessageContent: true
-            }
-          }
-        }
+              SupportTicketMessageContent: true,
+              user: {
+                select: {
+                  name: true,
+                  avatar: true,
+                  username: true,
+                  email: true,
+                  id: true,
+                  Membership: {
+                    select: {
+                      id: true,
+                      plan: {
+                        select: {
+                          name: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
       //#Fix ACL
@@ -146,6 +171,8 @@ const resolvers = {
               });
             }
 
+            notifyAdmin("INTERNAL", "New Support Ticket");
+
             return ticket;
           } catch (error) {
             console.log(error);
@@ -162,36 +189,35 @@ const resolvers = {
       return await prisma.$transaction(
         async (tx) => {
           try {
-
-
-
             const user = MyContext.user;
-            
+
             const ticket = await prisma.supportTicket.findUnique({
               where: {
-                id: args.ticketId
+                id: args.ticketId,
               },
-            })
+            });
 
-            let status: any = 'OPEN';
+            let status: any = "OPEN"; //#Fix
 
-            if(ticket.userId != MyContext.user.id){
+            if (ticket.userId != MyContext.user.id) {
               //Is Admin
-              status = 'AWAITING_RESPONSE';
-            }else{
-              if(ticket.status as string == 'AWAITING_RESPONSE'){
-                status = 'UNDER_REVIEW'
+              status = "AWAITING_RESPONSE";
+            } else {
+              if ((ticket.status as string) == "AWAITING_RESPONSE") {
+                status = "UNDER_REVIEW";
               }
             }
-            
+
+            console.log(status);
+
             await prisma.supportTicket.update({
               where: {
-                id: args.ticketId
+                id: args.ticketId,
               },
               data: {
-                status: status
-              }
-            })
+                status: status,
+              },
+            });
 
             const firstMessage = await tx.supportTicketMessage.create({
               data: {
@@ -220,6 +246,45 @@ const resolvers = {
             }
 
             return firstMessage;
+          } catch (error) {
+            console.log(error);
+            throw new Error(error);
+          }
+        },
+        {
+          maxWait: 10000, // default: 2000
+          timeout: 15000, // default: 5000
+        }
+      );
+    },
+    closeSupportTicket: async (root: any, args: any, MyContext) => {
+      return await prisma.$transaction(
+        async (tx) => {
+          try {
+            const ticket = await prisma.supportTicket.findUnique({
+              where: {
+                id: args.ticketId,
+              },
+            });
+
+            if (
+              ticket.userId === MyContext.user.id ||
+              (MyContext.user.UserRole[0] &&
+                MyContext.user.UserRole[0].roleId == 1)
+            ) {
+              const user = MyContext.user;
+
+              await prisma.supportTicket.update({
+                where: {
+                  id: args.ticketId,
+                },
+                data: {
+                  status: "CLOSED",
+                },
+              });
+              return true;
+            }
+            return false;
           } catch (error) {
             console.log(error);
             throw new Error(error);

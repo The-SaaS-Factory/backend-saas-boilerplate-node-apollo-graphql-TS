@@ -193,6 +193,7 @@ const resolvers = {
               "PLATFORM_FAVICON",
               "PLATFORM_LOGO",
               "PLATFORM_RESUME",
+              "DOC_EXTERNAL_LINK",
             ],
           },
         },
