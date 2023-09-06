@@ -2,7 +2,6 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const generateKpi = async () => {
-
   await prisma.adminKpi.create({
     data: {
       name: "user_count_total",
@@ -13,9 +12,9 @@ export const generateKpi = async () => {
 
   await prisma.adminKpi.create({
     data: {
-      name: "post_count_total",
+      name: "memberships_revenue",
       type: "counts",
-      value: await prisma.publication.count(),
+      value: await getTotalInvoiceAmount(),
     },
   });
 
@@ -29,6 +28,16 @@ export const generateKpi = async () => {
 
   return true;
 };
+
+async function getTotalInvoiceAmount() {
+  const result = await prisma.invoice.aggregate({
+    _sum: {
+      amount: true,  
+    },
+  });
+
+  return result._sum.amount; 
+}
 
 export const getSuperAdminSetting = async (settingName: string) => {
   const setting = await prisma.superAdminSetting.findFirst({

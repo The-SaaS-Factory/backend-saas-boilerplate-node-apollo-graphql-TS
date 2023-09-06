@@ -251,11 +251,8 @@ const resolvers = {
         },
       });
 
-      //Parse date to string - by Ts
-
       const parsedKpis = kpis.map((kpi) => {
         const createdAt = kpi.createdAt.toLocaleDateString();
-        // Puedes realizar conversiones adicionales o manipular otras propiedades aquí si es necesario
         return {
           ...kpi,
           createdAt: createdAt,
