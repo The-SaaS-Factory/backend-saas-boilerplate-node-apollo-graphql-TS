@@ -60,6 +60,21 @@ model User {
   @@index([typeId, languageId])
 }
 
+model Resources {
+  id           Int     @id @default(autoincrement())
+  name         String  @db.VarChar(256)
+  slug         String  @unique @db.VarChar(256)
+  type         String? @db.VarChar(56)
+  description  String? @db.LongText
+  linkDownload String  @db.VarChar(512)
+  linkVideo    String? @db.VarChar(256)
+  linkDemo     String? @db.VarChar(256)
+  resume       String? @db.Text
+  image        String? @db.VarChar(256)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model FrontendComponent {
   id          Int      @id @default(autoincrement())
   name        String   @db.VarChar(256)
@@ -440,14 +455,14 @@ model MarketingEmailListsMembers {
 }
 
 model SupportTicket {
-  id          Int                    @id @default(autoincrement())
+  id          Int                     @id @default(autoincrement())
   subject     String
-  departament SupportDepartamentType @default(SALES)
+  departament SupportDepartamentType  @default(SALES)
   status      SupportTicketStatusType @default(OPEN)
   userId      Int
-  User        User?                  @relation(fields: [userId], references: [id])
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  User        User?                   @relation(fields: [userId], references: [id])
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
 
   SupportTicketMessage SupportTicketMessage[]
 
@@ -486,14 +501,13 @@ enum SupportDepartamentType {
 }
 
 enum SupportTicketStatusType {
-    OPEN
-    UNDER_REVIEW
-    AWAITING_RESPONSE
-    CLOSED
-    REOPENED
-    CANCELED
+  OPEN
+  UNDER_REVIEW
+  AWAITING_RESPONSE
+  CLOSED
+  REOPENED
+  CANCELED
 }
-
 
 enum MarketingEmailListType {
   PLATFORM

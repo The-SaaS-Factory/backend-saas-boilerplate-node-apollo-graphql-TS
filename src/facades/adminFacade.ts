@@ -36,7 +36,7 @@ async function getTotalInvoiceAmount() {
     },
   });
 
-  return result._sum.amount; 
+  return result._sum.amount ?? 0; 
 }
 
 export const getSuperAdminSetting = async (settingName: string) => {

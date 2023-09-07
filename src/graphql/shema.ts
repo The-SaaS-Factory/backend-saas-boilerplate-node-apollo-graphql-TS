@@ -17,6 +17,11 @@ import {
 } from "./currencies.js";
  
 import {
+  typeDefs as ResourcesTypes,
+  resolvers as ResourcesResolvers,
+} from "./resources.js";
+ 
+import {
   typeDefs as AdministrationTypes,
   resolvers as AdministrationResolvers,
 } from "./administration.js";
@@ -34,6 +39,7 @@ const RootQuery = `
 const typeDefs = [
   RootQuery,
   EconomyTypes,
+  ResourcesTypes,
   MembershipTypes,
   UsersTypes,
   InvoiceTypes,
@@ -47,6 +53,7 @@ const resolvers = [
   MembershipResolvers,
   InvoiceResolvers,
   SuportResolvers,
+  ResourcesResolvers,
   CurrenciesResolvers,
   AdministrationResolvers,
 ];

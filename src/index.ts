@@ -91,7 +91,6 @@ await server.start();
 app.use(
   "/graphql",
   cors<cors.CorsRequest>(),
-  bodyParser.json({ limit: "1500mb" }),
   expressMiddleware(server, {
     context: async ({ req }) => {
       const token = req.headers.authorization || "";

@@ -12,7 +12,7 @@ router.use(
   bodyParser.urlencoded({
     limit: "150mb",
     extended: true,
-    parameterLimit: 500000,
+    parameterLimit: 50000,
   })
 );
 router.use(bodyParser.text({ limit: "2000mb" }));
