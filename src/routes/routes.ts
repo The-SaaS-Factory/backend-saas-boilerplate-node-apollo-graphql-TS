@@ -7,17 +7,9 @@ import { generateKpi } from "../facades/adminFacade.js";
 
 const router = express.Router();
 
-router.use(bodyParser.json({ limit: "150mb" }));
-router.use(
-  bodyParser.urlencoded({
-    limit: "150mb",
-    extended: true,
-    parameterLimit: 50000,
-  })
-);
-router.use(bodyParser.text({ limit: "2000mb" }));
 
 router.post("/saveImage", async (req, res) => {
+  
   const image = req.body;
 
   const imageGenerate: any = await imageKitFacade(

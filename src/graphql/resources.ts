@@ -6,6 +6,7 @@ const typeDefs = `#graphql
     id: Int,
     name: String
     type: String
+    slug: String
     description: String
     linkDownload: String
     linkVideo: String
@@ -18,7 +19,9 @@ const typeDefs = `#graphql
     getResource(slug: String!): ResourceType
   }
   extend type Mutation {
+    deleteResource(resourceId: Int!): Boolean
     createResource(
+      resourceId: Int,
      name: String!,
      slug: String!,
      type: String,
@@ -39,11 +42,6 @@ const resolvers = {
         orderBy: {
           createdAt: "desc",
         },
-        select: {
-          name: true,
-          image: true,
-          resume: true,
-        },
       });
     },
     getResource: async (root: any, args: { slug: string }) => {
@@ -55,6 +53,15 @@ const resolvers = {
     },
   },
   Mutation: {
+    deleteResource: async (root: any, args: { resourceId: number }) => {
+      await prisma.resources.delete({
+        where: {
+          id: args.resourceId,
+        },
+      });
+
+      return true;
+    },
     createResource: async (root: any, args: any) => {
       const slug = args.slug;
       const slugTest = await prisma.resources.findFirst({
@@ -63,13 +70,27 @@ const resolvers = {
         },
       });
 
-      if (slugTest) {
+      if (slugTest && !args.resourceId) {
         throw new Error("Slug already exists");
       }
       console.log(args);
-      
-      return await prisma.resources.create({
-        data: {
+
+      return await prisma.resources.upsert({
+        where: {
+          id: args.resourceId ? args.resourceId : 0,
+        },
+        create: {
+          name: args.name,
+          slug: args.slug,
+          type: args.type,
+          description: args.description,
+          linkDownload: args.linkDownload,
+          linkVideo: args.linkVideo,
+          linkDemo: args.linkDemo,
+          resume: args.resume,
+          image: args.image,
+        },
+        update: {
           name: args.name,
           slug: args.slug,
           type: args.type,

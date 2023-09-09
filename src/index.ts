@@ -20,7 +20,8 @@ import routes from "./routes/routes.js";
 import { generateKpi } from "./facades/adminFacade.js";
 import payments from "./routes/payment.js";
 import { getUser } from "./facades/userFacade.js";
-
+import pkg from 'body-parser';
+const { json } = pkg;
 const timezone = "America/Sao_Paulo";
 
 const prisma = new PrismaClient();
@@ -29,20 +30,17 @@ dotenv.config();
 const PORT = process.env.PORT || 8080;
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
 
 app.use(bodyParser.json({ limit: "150mb" }));
 app.use(
   bodyParser.urlencoded({
     limit: "150mb",
     extended: true,
-    parameterLimit: 500000,
+    parameterLimit: 50000,
   })
 );
 app.use(bodyParser.text({ limit: "2000mb" }));
-
+app.use(cors<cors.CorsRequest>());
 app.use("/v1", routes);
 app.use("/v1", payments);
 
@@ -91,6 +89,7 @@ await server.start();
 app.use(
   "/graphql",
   cors<cors.CorsRequest>(),
+  json(),
   expressMiddleware(server, {
     context: async ({ req }) => {
       const token = req.headers.authorization || "";

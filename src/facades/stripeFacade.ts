@@ -4,6 +4,8 @@ import { stripeEventInvoicePaid } from "./paymentFacade.js";
 
 const makeStripeClient = async () => {
   const stripeMode = await getSuperAdminSetting("STRIPE_MODE");
+  console.log(stripeMode);
+
   const STRIPE_CLIENT_SECRET_PRODUCTION = await getSuperAdminSetting(
     "STRIPE_CLIENT_SECRET_PRODUCTION"
   );
@@ -79,9 +81,12 @@ export const stripeCreatePlan = async (
   });
 };
 
+ 
+
 export const stripeCreateCustomer = async (customerPayload: any) => {
   try {
     const stripe = await makeStripeClient();
+
     return await stripe.customers.create({
       name: customerPayload.name,
       email: customerPayload.email,
@@ -102,4 +107,3 @@ export const stripeCreateSuscription = async (
 
   return await stripe.subscriptions.create(subscriptionPayload);
 };
- 

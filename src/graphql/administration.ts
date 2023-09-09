@@ -1,4 +1,6 @@
-import { createPaymentsServicesByDefault } from "../facades/paymentFacade.js";
+import {
+  createPaymentsServicesByDefault,
+} from "../facades/paymentFacade.js";
 import { MyContext } from "../types/MyContextInterface";
 import { Prisma, PrismaClient } from "@prisma/client";
 
@@ -143,7 +145,6 @@ type Mutation {
 
 const resolvers = {
   Query: {
-    
     getSuperAdminSettings: async (root: any, args: {}, context: MyContext) => {
       const settings = await prisma.superAdminSetting.findMany({});
 
@@ -421,14 +422,13 @@ const resolvers = {
       return role;
     },
     createPlan: async (root: any, args: any, context: MyContext) => {
-      await prisma.plan.upsert({
+      const plan = await prisma.plan.upsert({
         where: {
           id: args.planId ? args.planId : 0,
         },
         update: {
           name: args.name,
           type: args.interval,
-          price: args.price,
           description: args.description,
         },
         create: {
@@ -437,7 +437,11 @@ const resolvers = {
           price: args.price,
           description: args.description,
         },
+        include: {
+          settings: true,
+        }
       });
+      return plan;
     },
     createPermission: async (root: any, args: any, context: MyContext) => {
       const permission = await prisma.permission.create({

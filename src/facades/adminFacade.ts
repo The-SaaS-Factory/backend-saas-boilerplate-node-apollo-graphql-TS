@@ -46,6 +46,8 @@ export const getSuperAdminSetting = async (settingName: string) => {
     },
   });
 
+
+
   return setting ? setting.settingValue : null;
 };
 

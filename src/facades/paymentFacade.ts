@@ -1,6 +1,4 @@
-import {
-  PrismaClient,
-} from "@prisma/client";
+import { Plan, PrismaClient } from "@prisma/client";
 import {
   stripeCreateCustomer,
   stripeCreatePlan,
@@ -119,8 +117,8 @@ export const createStripeSubscription = async (
         paymentMethod,
       };
 
-      
       const customer = await stripeCreateCustomer(customerPayload);
+
       if (customer) {
         customerId = customer.id;
       }
@@ -135,13 +133,13 @@ export const createStripeSubscription = async (
     }
 
     if (customerId && plan) {
-      const setting = plan.settings.find(
+      const stripePlanConnected = plan.settings.find(
         (setting) => setting.settingName === "STRIPE_PLAN_ID"
       );
-      if (setting) {
+      if (stripePlanConnected) {
         const suscriptionPayload: Stripe.SubscriptionCreateParams = {
           customer: customerId,
-          items: [{ price: setting.settingValue }],
+          items: [{ price: stripePlanConnected.settingValue }],
           payment_settings: {
             payment_method_options: {
               card: {
@@ -185,6 +183,8 @@ export const createStripeSubscription = async (
           invoice_id: subscription.latest_invoice.id,
           invoice_pdf_url: subscription.latest_invoice.invoice_pdf,
         };
+      } else {
+        throw new Error("Plan not connected with Stripe");
       }
     }
   } catch (error) {
@@ -210,6 +210,8 @@ export const updateInvoice = async (invoiceId: number, payload) => {
     .catch((e) => console.log(e));
 };
 
+ 
+
 export const stripeEventInvoicePaid = async (eventData) => {
   let invoice = await prisma.invoice.findFirst({
     where: {
@@ -221,7 +223,6 @@ export const stripeEventInvoicePaid = async (eventData) => {
   });
 
   if (invoice) {
-  
     if (invoice.model === "plan") {
       const plan = await prisma.plan.findUnique({
         where: {
@@ -260,13 +261,19 @@ export const stripeEventInvoicePaid = async (eventData) => {
             break;
         }
 
-       const membership = await updateMembership(prisma, invoice.userId, invoice.modelId, months, false);
-       const payload = {
-         status: 'PAID',
-         paidAt:  new Date(),
-         model: 'MEMBERSHIP',
-         modelId : membership.id
-       }
+        const membership = await updateMembership(
+          prisma,
+          invoice.userId,
+          invoice.modelId,
+          months,
+          false
+        );
+        const payload = {
+          status: "PAID",
+          paidAt: new Date(),
+          model: "MEMBERSHIP",
+          modelId: membership.id,
+        };
         updateInvoice(invoice.id, payload);
       }
     }

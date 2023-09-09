@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 import { MyContext } from "../types/MyContextInterface";
- 
+
 import {
   getInvoiceByModelAndModelId,
   propagateCapabilitiesFromPlanToUser,
@@ -263,12 +263,17 @@ const resolvers = {
       });
 
       if (plan && user) {
-        if (args.gateway === "stripe") {
-          return await createStripeSubscription(
-            plan,
-            user,
-            args.gatewayPayload
-          );
+        try {
+          if (args.gateway === "stripe") {
+            return await createStripeSubscription(
+              plan,
+              user,
+              args.gatewayPayload
+            );
+          }
+        } catch (error) {
+          console.log(error);
+          throw new Error(error.message);
         }
         // let months = 0;
 
