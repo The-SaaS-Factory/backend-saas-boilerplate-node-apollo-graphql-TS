@@ -26,7 +26,7 @@ export const plans = [
     name: "Basic Plan",
     type: "month",
     description: "Basic access to the software",
-    price: 19.99,
+    price: 20,
   },
   {
     name: "Premium Plan",
