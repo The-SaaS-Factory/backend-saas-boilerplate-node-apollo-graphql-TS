@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only ./src/index.ts",
     "start": "tsc && nodemon ./src/index.ts",
-    "build": "prisma generate &&  prisma db push && tsc"
+    "build": "prisma generate && tsc"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
