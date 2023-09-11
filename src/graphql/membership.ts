@@ -21,6 +21,8 @@ type PlanType {
     name: String
     type: String
     price: Float
+    oldPrice: Float
+    status: String
     description: String
     settings: [PlanSettingType]
     PlanCapabilities: [PlanCapabilitieType]
@@ -76,6 +78,7 @@ type SubscriptionStripePaymentTpe {
         buyPlan(planId: Int!, gateway: String): Boolean
         buyPlanWithStripe(planId: Int!, gateway: String, gatewayPayload:String!): SubscriptionStripePaymentTpe
         connectStripePlanWithLocalPlan(planId:Int!): Boolean
+        disconectStripePlanWithLocalPlan(planId:Int!): Boolean
         connectCapabilitieWithPlan(planId:Int!,capabilitieId:Int!, count: Int, name: String): PlanCapabilitieType
         createCapabilitie(name: String!, description:String, type: String): CapabilitieType
         deleteCapabilitie(capabilitieId: Int!): Boolean
@@ -139,6 +142,19 @@ const resolvers = {
       context: MyContext
     ) => {
       return await connectStripePlanWithLocalPlan(args.planId);
+    },
+    disconectStripePlanWithLocalPlan: async (
+      root: any,
+      args: any,
+      context: MyContext
+    ) => {
+      await prisma.planSetting.deleteMany({
+        where: {
+          planId: args.planId,
+          settingName: "STRIPE_PLAN_ID",
+        },
+      });
+      return true;
     },
     connectCapabilitieWithPlan: async (
       root: any,

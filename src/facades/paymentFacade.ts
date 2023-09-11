@@ -52,12 +52,51 @@ export const connectStripePlanWithLocalPlan = async (localPlanId: number) => {
         stripeProductId = stripeProductSaved;
       }
 
+      let intervalCount = 1;
+      let intervaltype: Stripe.PlanCreateParams.Interval = "month";
+
+      switch (localPlan.type) {
+        case "month":
+          intervalCount = 1;
+          break;
+        case "quarterly":
+          intervalCount = 3;
+          intervaltype = "month";
+          break;
+        case "semiannually":
+          intervalCount = 6;
+          intervaltype = "month";
+          break;
+        case "year":
+          intervalCount = 12;
+          intervaltype = "year";
+          break;
+        case "biennially":
+          intervalCount = 24;
+          intervaltype = "year";
+          break;
+        case "triennially":
+          intervalCount = 36;
+          intervaltype = "year";
+          break;
+        case "lifetime":
+          intervalCount = 1200;
+          intervaltype = "year";
+          break;
+
+        default:
+          1;
+          break;
+      }
+
       const planPayload: Stripe.PlanCreateParams = {
         amount: localPlan.price,
         currency: "usd",
-        interval: localPlan.type,
+        interval: intervaltype,
+        interval_count: intervalCount,
         product: stripeProductId,
       };
+
       const stripePlan = await stripeCreatePlan(stripeProductId, planPayload);
 
       if (stripePlan) {

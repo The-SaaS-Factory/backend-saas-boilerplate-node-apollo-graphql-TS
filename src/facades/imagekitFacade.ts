@@ -14,6 +14,14 @@ export const imageKitFacade = async (base64Img, imageName) => {
         "IMAGEKIT_URL_ENDPOINT"
       );
 
+      if (
+        !IMAGEKIT_PUBLIC_KEY ||
+        !IMAGEKIT_PRIVATE_KEY ||
+        !IMAGEKIT_URL_ENDPOINT
+      ) {
+        throw new Error("ImageKit settings not found");
+      }
+
       const resolver = new imageKit({
         publicKey: IMAGEKIT_PUBLIC_KEY,
         privateKey: IMAGEKIT_PRIVATE_KEY,
@@ -30,12 +38,12 @@ export const imageKitFacade = async (base64Img, imageName) => {
           if (error) {
             reject(new Error("Failed uploading file"));
           } else {
-            resolve(result);
+            resolve({ error: null, result: result });
           }
         }
       );
     } catch (error) {
-      throw new Error(error.message);
+       reject({ error: error, result: null });
     }
   });
 };

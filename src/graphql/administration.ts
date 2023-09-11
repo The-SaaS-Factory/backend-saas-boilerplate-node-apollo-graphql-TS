@@ -1,6 +1,4 @@
-import {
-  createPaymentsServicesByDefault,
-} from "../facades/paymentFacade.js";
+import { createPaymentsServicesByDefault } from "../facades/paymentFacade.js";
 import { MyContext } from "../types/MyContextInterface";
 import { Prisma, PrismaClient } from "@prisma/client";
 
@@ -24,6 +22,8 @@ const typeDefs = `#graphql
     type: String
     description: String
     price:Float
+    oldPrice: Float
+    status: String
     Permission: [PlanPermission]
 } 
  type Role {
@@ -122,8 +122,10 @@ type Mutation {
       name: String
       interval: String
       price: Float
+      oldPrice: Float
+      status: String
       description: String
-    ): Language,
+    ): Plan,
     deletePlan(planId: Int): Boolean
     deleteLanguage(languageId: Int!): Boolean
     createRole(
@@ -195,6 +197,9 @@ const resolvers = {
               "PLATFORM_LOGO",
               "PLATFORM_RESUME",
               "DOC_EXTERNAL_LINK",
+              "DOC_EXTERNAL_LINK",
+              "PLATFORM_DEMO_URL",
+              "PLATFORM_DOC_URL",
             ],
           },
         },
@@ -422,26 +427,27 @@ const resolvers = {
       return role;
     },
     createPlan: async (root: any, args: any, context: MyContext) => {
-      const plan = await prisma.plan.upsert({
+      await prisma.plan.upsert({
         where: {
           id: args.planId ? args.planId : 0,
         },
         update: {
           name: args.name,
           type: args.interval,
+          price: args.price,
           description: args.description,
+          oldPrice: args.oldPrice,
+          status: args.status,
         },
         create: {
           name: args.name,
           type: args.interval,
           price: args.price,
           description: args.description,
+          oldPrice: args.oldPrice,
+          status: args.status,
         },
-        include: {
-          settings: true,
-        }
       });
-      return plan;
     },
     createPermission: async (root: any, args: any, context: MyContext) => {
       const permission = await prisma.permission.create({

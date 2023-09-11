@@ -190,8 +190,10 @@ model Plan {
   id               Int                @id @default(autoincrement())
   name             String
   type             String
+  status           String             @default("ACTIVE")
   description      String?            @db.Text
   price            Float
+  oldPrice         Float?
   Membership       Membership[]
   Permission       PlanPermission[]
   settings         PlanSetting[]
