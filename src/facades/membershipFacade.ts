@@ -99,7 +99,20 @@ export const getInvoiceByModelAndModelId = async (model, modelId) => {
       modelId: modelId,
     },
     include: {
-      currency: true
-    }
+      currency: true,
+    },
+  });
+};
+
+export const getPlanByStripePlanId = async (priceId: string) => {
+  return await prisma.plan.findFirst({
+    where: {
+      settings: {
+        some: {
+          settingName: "STRIPE_PLAN_ID",
+          settingValue: priceId,
+        },
+      },
+    },
   });
 };

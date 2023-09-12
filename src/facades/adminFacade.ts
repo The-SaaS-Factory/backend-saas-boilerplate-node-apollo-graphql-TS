@@ -32,31 +32,48 @@ export const generateKpi = async () => {
 async function getTotalInvoiceAmount() {
   const result = await prisma.invoice.aggregate({
     _sum: {
-      amount: true,  
+      amount: true,
     },
   });
 
-  return result._sum.amount ?? 0; 
+  return result._sum.amount ?? 0;
+}
+
+export const getCurrencyIdByCode = async (code: string) => {
+  const currency = await prisma.adminCurrencies.findFirst({
+    where: {
+      code: code,
+    },
+  });
+
+  return currency ? currency.id : null;
 }
 
 export const getSuperAdminSetting = async (settingName: string) => {
-  const setting = await prisma.superAdminSetting.findFirst({
-    where: {
-      settingName: settingName,
-    },
-  });
+  try {
+    const setting = await prisma.superAdminSetting.findFirst({
+      where: {
+        settingName: settingName,
+      },
+    });
 
-
-
-  return setting ? setting.settingValue : null;
+    return setting ? setting.settingValue : null;
+  } catch (error) {
+    throw error;
+  }
 };
 
-export const getAdminSetting = async (settingName: string) => {
-  const setting = await prisma.userSetting.findFirst({
-    where: {
-      settingName: settingName,
-    },
-  });
+export const getAdminSettingValue = async (settingName: string, value: string) => {
+  try {
+    const setting = await prisma.userSetting.findFirst({
+      where: {
+        settingName: settingName,
+        settingValue: value,
+      },
+    });
 
-  return setting ? setting.settingValue : null;
+    return setting ? setting : null;
+  } catch (error) {
+    throw error;
+  }
 };

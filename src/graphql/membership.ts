@@ -291,20 +291,6 @@ const resolvers = {
           console.log(error);
           throw new Error(error.message);
         }
-        // let months = 0;
-
-        // switch (plan.type) {
-        //   case "month":
-        //     months = 1;
-        //     break;
-        //   case "year":
-        //     months = 12;
-        //     break;
-
-        //   default:
-        //     months = 1;
-        //     break;
-        // }
         return {
           clientSecret: "",
           subscriptionId: "",

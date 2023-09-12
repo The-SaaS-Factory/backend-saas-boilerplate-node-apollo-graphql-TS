@@ -1,15 +1,16 @@
-import { Plan, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import {
   stripeCreateCustomer,
   stripeCreatePlan,
   stripeCreateProduct,
   stripeCreateSuscription,
 } from "./stripeFacade.js";
-import { getSuperAdminSetting } from "./adminFacade.js";
+import { getAdminSettingValue, getSuperAdminSetting } from "./adminFacade.js";
 import Stripe from "stripe";
 import { SettingType } from "../types/User.js";
 import { InvoiceType } from "../types/paymentsTypes.js";
 import { updateMembership } from "./membershipFacade.js";
+import { notifyAdmin, sendInternalNotificatoin } from "./notificationFacade.js";
 
 const prisma = new PrismaClient();
 export const createPaymentsServicesByDefault = async (serviceName: string) => {
@@ -157,18 +158,11 @@ export const createStripeSubscription = async (
       };
 
       const customer = await stripeCreateCustomer(customerPayload);
-
       if (customer) {
         customerId = customer.id;
       }
 
-      await prisma.userSetting.create({
-        data: {
-          settingName: "STRIPE_CUSTUMER_IR",
-          settingValue: customerId,
-          userId: user.id,
-        },
-      });
+      saveStripeCustomerId(user.id, customerId);
     }
 
     if (customerId && plan) {
@@ -213,6 +207,8 @@ export const createStripeSubscription = async (
 
         createInvoice(payloadInvoice);
 
+        console.log(subscription);
+
         return {
           clientSecret:
             subscription.latest_invoice.payment_intent.client_secret,
@@ -231,12 +227,23 @@ export const createStripeSubscription = async (
   }
 };
 
+export const saveStripeCustomerId = async (
+  userId: number,
+  customerId: string
+) => {
+  await prisma.userSetting.create({
+    data: {
+      settingName: "STRIPE_CUSTUMER_IR",
+      settingValue: customerId,
+      userId: userId,
+    },
+  });
+};
+
 export const createInvoice = async (invoicePayload: InvoiceType) => {
-  const invoice = await prisma.invoice
-    .create({
-      data: invoicePayload,
-    })
-    .catch((e) => console.log(e));
+  return await prisma.invoice.create({
+    data: invoicePayload,
+  });
 };
 export const updateInvoice = async (invoiceId: number, payload) => {
   await prisma.invoice
@@ -249,12 +256,30 @@ export const updateInvoice = async (invoiceId: number, payload) => {
     .catch((e) => console.log(e));
 };
 
- 
+export const stripeEventPaymentFailed = async (eventData) => {
+  const setting: any = getAdminSettingValue(
+    "STRIPE_CUSTUMER_IR",
+    eventData.customer
+  );
 
-export const stripeEventInvoicePaid = async (eventData) => {
+  if (setting && setting.userId) {
+    sendInternalNotificatoin(
+      setting.userId,
+      "Payment failed",
+      eventData.last_payment_error.message
+    );
+
+    notifyAdmin(
+      "payment_failed",
+      `Payment failed for user ${setting.userId}, message: ${eventData.last_payment_error.message}`
+    );
+  }
+};
+
+export const invoicePaid = async (invoiceId) => {
   let invoice = await prisma.invoice.findFirst({
     where: {
-      gatewayId: eventData.id,
+      gatewayId: invoiceId,
     },
     include: {
       user: true,
@@ -310,10 +335,16 @@ export const stripeEventInvoicePaid = async (eventData) => {
         const payload = {
           status: "PAID",
           paidAt: new Date(),
-          model: "MEMBERSHIP",
+          model: "plan",
           modelId: membership.id,
         };
         updateInvoice(invoice.id, payload);
+
+        sendInternalNotificatoin(invoice.userId, "Payment success", "");
+        notifyAdmin(
+          "payment_success",
+          `Payment success for user ${invoice.userId}`
+        );
       }
     }
   }
