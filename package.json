@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only ./src/index.ts",
     "start": "tsc && nodemon ./src/index.ts",
