@@ -14,7 +14,7 @@ import {
   checkSettingAction,
   createDefaultSettingForuser,
 } from "../facades/userFacade.js";
-import { checkMarketingActionsForNewUser } from "../facades/marketingFacades.js";
+import { checkMarketingActionsForNewUser } from "../facades/marketingFacade.js";
 import { sendResetCodeEmail, sendWelcomeEmail } from "../facades/mailFacade.js";
 import { env } from "process";
 
@@ -50,15 +50,6 @@ type Avatar {
         currency: CurrencyType
     }
     
-    type TournamentRanking {
-        points: Float,
-    }
-
-    type Person {
-    id:  ID!,
-    name: String
-    email: String,
-  }
   
   type NewUserType {
     user:  User!,
@@ -70,7 +61,6 @@ type Avatar {
   refer: User
   }
 
- 
   
     type Avatar {
       id:  ID!
@@ -171,11 +161,7 @@ type Avatar {
     forgotPassword(email:String!): Boolean
     checkResetCode(email:String!,resetCode:String!): CodeForChangePassword
     updatePasswordByEmail(userId:Int!,newPassword:String!): Boolean
-    propagateTheFirstPublicationsForNewUser: Boolean
     updateUser(email: String,username: String, name: String, resume: String, password: String,avatar: String, cover: String,avatar_thumbnail: String, phone: String, country: String, state:String, city:String,languageId: Int): User
-    followUser(
-      followingId: Int!
-    ): Boolean
     saveSetting(
       settingName: String!
       settingValue: String!
@@ -228,7 +214,6 @@ const resolvers = {
             },
           },
           UserCapabilities: true,
-
           Language: true,
           UserSetting: true,
           amounts: {
@@ -236,7 +221,6 @@ const resolvers = {
               currency: true,
             },
           },
-
           _count: {
             select: {
               refer: true,

@@ -36,7 +36,6 @@ model User {
   updatedAt                  DateTime                     @updatedAt
   Language                   Language                     @relation(fields: [languageId], references: [id])
   languageId                 Int                          @default(1)
-  Publication                Publication[]
   amounts                    UserAmounts[]
   UserSetting                UserSetting[]
   UserRole                   UserRole[]
@@ -58,21 +57,6 @@ model User {
   SupportTicketMessage       SupportTicketMessage[]
 
   @@index([typeId, languageId])
-}
-
-model Resources {
-  id           Int     @id @default(autoincrement())
-  name         String  @db.VarChar(256)
-  slug         String  @unique @db.VarChar(256)
-  type         String? @db.VarChar(56)
-  description  String? @db.LongText
-  linkDownload String  @db.VarChar(512)
-  linkVideo    String? @db.VarChar(256)
-  linkDemo     String? @db.VarChar(256)
-  resume       String? @db.Text
-  image        String? @db.VarChar(256)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model FrontendComponent {
@@ -345,36 +329,6 @@ model Language {
   FrontendComponent FrontendComponent[]
 }
 
-model Publication {
-  id        Int                     @id @default(autoincrement())
-  views     Int                     @default(0)
-  user      User                    @relation(fields: [userId], references: [id])
-  userId    Int
-  scope     String                  @default("PROFILE")
-  parentId  Int?                    @map("parentId")
-  function  PublicationFunctionType @default(POST)
-  type      PublicationType         @default(STATUS)
-  status    PublicationStatus       @default(PUBLISHED)
-  reaction  String?                 @default("Excited")
-  contents  PublicationContent[]
-  createdAt DateTime                @default(now())
-  updatedAt DateTime                @updatedAt
-  comments  Publication[]           @relation("ParentCommentToPublication")
-  parent    Publication?            @relation("ParentCommentToPublication", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([userId, parentId])
-}
-
-model PublicationContent {
-  id            Int                    @id @default(autoincrement())
-  publicationId Int
-  type          PublicationContentType @default(TEXT)
-  publication   Publication            @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-  content       String                 @db.Text
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
-}
-
 model Notification {
   id      Int              @id @default(autoincrement())
   userId  Int
@@ -383,7 +337,6 @@ model Notification {
   viewed  Boolean          @default(false)
   data    DateTime         @default(now())
   type    NotificationType
-  // Otros campos que puedas necesitar
 
   user User @relation(fields: [userId], references: [id])
 }
