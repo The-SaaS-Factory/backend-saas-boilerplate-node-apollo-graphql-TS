@@ -4,7 +4,7 @@
 #
 
 # Change App Name !!!
-app = "saasfactory"
+app = "backend-saas-boilerplate"
 
 primary_region = "gru"
 
