@@ -75,6 +75,15 @@ type SubscriptionStripePaymentTpe {
     }
   
   type Mutation {
+        createPlan(
+          planId: Int
+          name: String
+          type: String
+          price: Float
+          oldPrice: Float
+          status: String
+          description: String
+        ): Plan,
         buyPlan(planId: Int!, gateway: String): Boolean
         buyPlanWithStripe(planId: Int!, gateway: String, gatewayPayload:String!): SubscriptionStripePaymentTpe
         connectStripePlanWithLocalPlan(planId:Int!): Boolean
@@ -216,6 +225,29 @@ const resolvers = {
       } catch (error) {
         throw new Error(error.message);
       }
+    },
+    createPlan: async (root: any, args: any, context: MyContext) => {
+      await prisma.plan.upsert({
+        where: {
+          id: args.planId ? args.planId : 0,
+        },
+        update: {
+          name: args.name,
+          type: args.type,
+          price: args.price,
+          description: args.description,
+          oldPrice: args.oldPrice,
+          status: args.status,
+        },
+        create: {
+          name: args.name,
+          type: args.type,
+          price: args.price,
+          description: args.description,
+          oldPrice: args.oldPrice,
+          status: args.status,
+        },
+      });
     },
     buyPlan: async (root: any, args: any, context: MyContext) => {
       const plan = await prisma.plan.findFirst({

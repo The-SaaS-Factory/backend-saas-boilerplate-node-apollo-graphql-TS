@@ -20,14 +20,26 @@ import routes from "./routes/routes.js";
 import { generateKpi } from "./facades/adminFacade.js";
 import payments from "./routes/payment.js";
 import { getUser } from "./facades/userFacade.js";
-import pkg from 'body-parser';
+import pkg from "body-parser";
 const { json } = pkg;
+import {
+  ClerkExpressWithAuth,
+  LooseAuthProp,
+  WithAuthProp,
+} from "@clerk/clerk-sdk-node";
+import { handleWebhook } from "./facades/clerkFacade.js";
+
+declare global {
+  namespace Express {
+    interface Request extends LooseAuthProp {}
+  }
+}
 const timezone = "America/Sao_Paulo";
 
 const prisma = new PrismaClient();
 dotenv.config();
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8000;
 
 const app = express();
 
@@ -39,9 +51,18 @@ app.use(
     parameterLimit: 50000,
   })
 );
+//Test
+
 app.use(bodyParser.text({ limit: "2000mb" }));
 app.use(cors<cors.CorsRequest>());
 app.use("/v1", routes);
+app.post(
+  "/api/v1/clerk/webhook",
+  bodyParser.raw({ type: "application/json" }),
+  async function (req, res) {
+    return await handleWebhook(req, res);
+  }
+);
 app.use("/v1", payments);
 
 cron.schedule("0 0 * * *", async () => {
@@ -92,8 +113,11 @@ app.use(
   json(),
   expressMiddleware(server, {
     context: async ({ req }) => {
-      const token = req.headers.authorization || "";
-      const user = await getUser(token);
+      let token = req.headers.authorization || "";
+      //Remove Bearer from token
+      token = token.replace("Bearer ", "");
+
+      const user = await getUser(token as string);
       const ipAddress = req.ip || req.socket.remoteAddress || "";
       const deviceInfo = req.headers["user-agent"] || "";
       return { user, prisma, ipAddress, deviceInfo };

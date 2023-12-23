@@ -117,15 +117,7 @@ type Mutation {
     saveAdminSetting(
       settings: [SuperAdminSetting],
     ): Boolean,
-    createPlan(
-      planId: Int
-      name: String
-      interval: String
-      price: Float
-      oldPrice: Float
-      status: String
-      description: String
-    ): Plan,
+  
     deletePlan(planId: Int): Boolean
     deleteLanguage(languageId: Int!): Boolean
     createRole(
@@ -426,29 +418,7 @@ const resolvers = {
       });
       return role;
     },
-    createPlan: async (root: any, args: any, context: MyContext) => {
-      await prisma.plan.upsert({
-        where: {
-          id: args.planId ? args.planId : 0,
-        },
-        update: {
-          name: args.name,
-          type: args.interval,
-          price: args.price,
-          description: args.description,
-          oldPrice: args.oldPrice,
-          status: args.status,
-        },
-        create: {
-          name: args.name,
-          type: args.interval,
-          price: args.price,
-          description: args.description,
-          oldPrice: args.oldPrice,
-          status: args.status,
-        },
-      });
-    },
+   
     createPermission: async (root: any, args: any, context: MyContext) => {
       const permission = await prisma.permission.create({
         data: {

@@ -268,20 +268,20 @@ const resolvers = {
       const offset = args.offset;
       typeSelected = {};
 
-      if (args.search) {
-        typeSelected = {
-          OR: [
-            {
-              username: {
-                contains: args.search,
-              },
-              name: {
-                contains: args.search,
-              },
-            },
-          ],
-        };
-      }
+      // if (args.search) {  //Fix this
+      //   typeSelected = {
+      //     OR: [
+      //       {
+      //         username: {
+      //           contains: args.search,
+      //         },
+      //         name: {
+      //           contains: args.search,
+      //         },
+      //       },
+      //     ],
+      //   };
+      // }
 
       const users = await prisma.user.findMany({
         where: {
@@ -319,154 +319,7 @@ const resolvers = {
     },
   },
   Mutation: {
-    login: async (
-      root: any,
-      args: { email: Prisma.StringFilter; password: string }
-    ) => {
-      let userFind: Prisma.UserFindFirstArgs;
-
-      userFind = {
-        where: {
-          email: args.email,
-        },
-        include: {
-          UserPermission: {
-            select: {
-              permission: true,
-            },
-          },
-          UserRole: {
-            select: {
-              role: true,
-            },
-          },
-          Membership: {
-            select: {
-              endDate: true,
-              plan: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      };
-
-      const user = await prisma.user.findFirst(userFind);
-      //Decrypt password before compare with bcrypt
-
-      if (!user || !bcrypt.compareSync(args.password, user.password)) {
-        throw new Error("Invalid credentials");
-      }
-
-      const userForToken = {
-        username: user.username,
-        id: user.id,
-      };
-
-      return { token: jwt.sign(userForToken, env.JWT_SECRET), user: user };
-    },
-
-    createUser: async (root: any, args: any, { prisma }) => {
-      try {
-        return await prisma.$transaction(async (tx) => {
-          const { email, username, password, sponsor, lang } = args;
-
-          // Check if email is already taken
-          const existingUser = await tx.user.findFirst({
-            where: {
-              email,
-            },
-          });
-
-          if (existingUser) {
-            throw new Error("email_registered");
-          }
-
-          const [langBase] = lang ? lang.split("-") : "en";
-
-          let languageId = 1;
-
-          if (lang) {
-            switch (langBase) {
-              case "pt":
-                languageId = 3;
-                break;
-
-              case "es":
-                languageId = 2;
-                break;
-
-              default:
-                languageId = 1;
-                break;
-            }
-          }
-
-          let name = username;
-          let newUserName = await generateUniqueUsername(tx, name);
-
-          const user = await tx.user.create({
-            data: {
-              email,
-              name,
-              languageId,
-              username: newUserName,
-              password: bcrypt.hashSync(password, 10),
-            },
-          });
-
-          if (user && sponsor) {
-            const referringUser = await tx.user.findUnique({
-              where: {
-                id: sponsor,
-              },
-              include: {
-                Membership: true,
-              },
-            });
-
-            if (referringUser) {
-              const referral = await tx.referral.create({
-                data: {
-                  refer: {
-                    connect: {
-                      id: referringUser.id,
-                    },
-                  },
-                  referred: {
-                    connect: {
-                      id: user.id,
-                    },
-                  },
-                },
-              });
-            }
-          }
-
-          //Marketing actions on register
-          checkMarketingActionsForNewUser(user);
-
-          if (user) {
-            const userForToken = {
-              username: user.username,
-              id: user.id,
-            };
-
-            sendWelcomeEmail(user);
-            return {
-              token: jwt.sign(userForToken, env.JWT_SECRET, {
-                expiresIn: "7d",
-              }),
-              user: user,
-            };
-          }
-        });
-      } catch (error) {
-        throw new Error(error.message);
-      }
-    },
+    
     markNotificationsAsRead: async (root: any, args: any, MyContext) => {
       try {
         const notifications = await prisma.notification.updateMany({
@@ -538,87 +391,9 @@ const resolvers = {
 
       return null;
     },
-    forgotPassword: async (root: any, args: { email: string }) => {
-      try {
-        const user = await prisma.user.findFirst({
-          where: {
-            email: args.email,
-          },
-        });
-
-        if (!user) {
-          throw new Error("Email not found");
-        }
-
-        let resetCode = generateSecureResetCode();
-        let resetCodeExpires = new Date(Date.now() + 1800000);
-
-        const updateUser = await prisma.user.update({
-          where: {
-            id: user.id,
-          },
-          data: {
-            resetCode: resetCode,
-            resetCodeExpires: resetCodeExpires,
-          },
-        });
-
-        if (updateUser) {
-          sendResetCodeEmail(updateUser.email, resetCode);
-        }
-      } catch (error) {
-        throw new Error(error.message);
-      }
-    },
-    checkResetCode: async (
-      root: any,
-      args: { email: string; resetCode: string }
-    ) => {
-      try {
-        const user = await prisma.user.findFirst({
-          where: {
-            email: args.email,
-          },
-        });
-
-        if (!user) {
-          throw new Error("Email not found");
-        }
-
-        if (user.resetCode !== args.resetCode) {
-          throw new Error("Invalid reset code");
-        }
-
-        if (user.resetCodeExpires < new Date()) {
-          throw new Error("Reset code has expired");
-        }
-
-        // Si todo está bien, devuelve el ID del usuario
-        return { userId: user.id };
-      } catch (error) {
-        throw new Error(error.message);
-      }
-    },
-    updatePasswordByEmail: async (
-      root: any,
-      args: { userId: number; newPassword: string },
-      MyContext
-    ) => {
-      try {
-        const user = await prisma.user.update({
-          where: {
-            id: args.userId,
-          },
-          data: {
-            password: bcrypt.hashSync(args.newPassword, 3),
-          },
-        });
-      } catch (error) {
-        throw new Error(
-          traslate("UnableToChangePassword", args.userId ? args.userId : 1, {})
-        );
-      }
-    },
+   
+   
+   
     saveSetting: async (
       root: any,
       args: { settingName: string; settingValue: string },

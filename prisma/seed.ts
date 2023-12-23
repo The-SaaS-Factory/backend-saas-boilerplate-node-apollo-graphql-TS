@@ -17,9 +17,9 @@ async function main() {
     await tx.adminCurrencies.createMany({
       data: currencies,
     });
-    await tx.user.createMany({
-      data: users,
-    });
+    // await tx.user.createMany({
+    //   data: users,
+    // });
     await tx.language.createMany({
       data: languages,
     });
