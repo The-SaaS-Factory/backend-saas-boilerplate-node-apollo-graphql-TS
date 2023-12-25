@@ -1,18 +1,51 @@
 import { PrismaClient } from "@prisma/client";
+import {
+  handleUpdateDataForOrganization,
+  handleUpdateDataForUser,
+} from "./clerkFacade.js";
+import { handleOrganizationUpdated } from "./organizationFacade.js";
 const prisma = new PrismaClient();
 
-export const updateMembership = async (
-  client: PrismaClient,
-  userId: number,
-  planId: number,
-  months: number,
-  freeTrial: boolean
-) => {
-  const currentMemberShip = await client.membership.findFirst({
-    where: {
-      userId: userId,
-    },
-  });
+export const updateMembership = async ({
+  model,
+  modelId,
+  months,
+  freeTrial,
+  planId,
+}: {
+  model: string;
+  modelId: number;
+  months: number;
+  freeTrial: boolean;
+  planId: number;
+}) => {
+  let currentMemberShip = null;
+
+  if (model === "User") {
+    currentMemberShip = await prisma.membership.findFirst({
+      where: {
+        userId: modelId,
+      },
+    });
+
+    propagateCapabilitiesFromPlanToUser(planId, modelId);
+  } else if (model === "Organization") {
+    currentMemberShip = await prisma.membership.findFirst({
+      where: {
+        organizationId: modelId,
+      },
+    });
+
+    propagateCapabilitiesFromPlanToOrganization(planId, modelId);
+  }
+
+  const createPayload = {
+    userId: model === "User" ? modelId : null,
+    organizationId: model === "Organization" ? modelId : null,
+    planId: planId,
+    startDate: new Date(),
+    endDate: new Date(),
+  };
 
   const endDate = currentMemberShip
     ? new Date(currentMemberShip.endDate)
@@ -20,26 +53,46 @@ export const updateMembership = async (
 
   const days = months * 30.44;
 
-  propagateCapabilitiesFromPlanToUser(planId, userId);
-
-  return await client.membership.upsert({
+  const membership = await prisma.membership.upsert({
     where: {
-      userId: userId,
+      id: currentMemberShip ? currentMemberShip.id : 0,
     },
-    create: {
-      userId: userId,
-      planId: planId,
-      startDate: new Date(),
-      endDate: new Date(new Date().getTime() + days * 24 * 60 * 60 * 1000),
-      endDateFreeTrial: freeTrial
-        ? new Date(new Date().setMonth(new Date().getMonth() + months))
-        : null,
-    },
+    create: createPayload,
     update: {
       planId: planId,
       endDate: new Date(endDate.setMonth(endDate.getMonth() + months)),
     },
+    include: {
+      plan: true,
+    },
   });
+
+  //Update user in auth service
+  if (model === "User") {
+    handleUpdateDataForUser({
+      scope: "publicMetadata",
+      data: {
+        membershipActive: true,
+        membershipPlan: membership.plan.name,
+        membershipStartDate: membership.startDate,
+        membershipEndDate: membership.endDate,
+      },
+      userBdId: modelId,
+    });
+  } else if (model === "Organization") {
+    handleUpdateDataForOrganization({
+      scope: "publicMetadata",
+      data: {
+        membershipActive: true,
+        membershipPlan: membership.plan.name,
+        membershipStartDate: membership.startDate,
+        membershipEndDate: membership.endDate,
+      },
+      organizationBdId: modelId,
+    });
+  }
+
+  return membership;
 };
 
 export const propagateCapabilitiesOnAsociateWithPlanNewCapabilitie = async (
@@ -48,8 +101,28 @@ export const propagateCapabilitiesOnAsociateWithPlanNewCapabilitie = async (
   const users = await prisma.membership.findMany({
     where: {
       planId: planId,
+      userId: {
+        not: null,
+      },
     },
     distinct: ["userId"],
+  });
+
+  const organizations = await prisma.membership.findMany({
+    where: {
+      planId: planId,
+      organizationId: {
+        not: null,
+      },
+    },
+    distinct: ["organizationId"],
+  });
+
+  organizations.map((organization) => {
+    propagateCapabilitiesFromPlanToOrganization(
+      planId,
+      organization.organizationId
+    );
   });
 
   users.map((user) => {
@@ -84,6 +157,60 @@ export const propagateCapabilitiesFromPlanToUser = async (
           data: {
             userId: userId,
             capabilitieId: c.capabilitie.id,
+            count: c.capabilitie.type === "LIMIT" ? 0 : c.count,
+          },
+        });
+      } else {
+        await prisma.userCapabilities.update({
+          where: {
+            id: userCapabilicitie.id,
+          },
+          data: {
+            count: c.capabilitie.type === "LIMIT" ? 0 : c.count,
+          },
+        });
+      }
+    })
+  );
+};
+
+export const propagateCapabilitiesFromPlanToOrganization = async (
+  planId: number,
+  organizationId: number
+) => {
+  const capabilities = await prisma.planCapabilities.findMany({
+    where: {
+      planId: planId,
+    },
+    include: {
+      capabilitie: true,
+    },
+  });
+
+  Promise.all(
+    capabilities.map(async (c) => {
+      const organizationCapabilitie =
+        await prisma.organizationCapabilities.findFirst({
+          where: {
+            organizationId: organizationId,
+            capabilitieId: c.capabilitie.id,
+          },
+        });
+
+      if (!organizationCapabilitie) {
+        await prisma.organizationCapabilities.create({
+          data: {
+            organizationId: organizationId,
+            capabilitieId: c.capabilitie.id,
+            count: c.capabilitie.type === "LIMIT" ? 0 : c.count,
+          },
+        });
+      } else {
+        await prisma.organizationCapabilities.update({
+          where: {
+            id: organizationCapabilitie.id,
+          },
+          data: {
             count: c.capabilitie.type === "LIMIT" ? 0 : c.count,
           },
         });

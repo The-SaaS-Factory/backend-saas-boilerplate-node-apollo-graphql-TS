@@ -19,7 +19,7 @@ model User {
   externalAttributes         String?                      @db.Text
   email                      String?                      @db.VarChar(255)
   username                   String?                      @unique @db.VarChar(255)
-  name                       String?                       @db.VarChar(255)
+  name                       String?                      @db.VarChar(255)
   typeId                     Int                          @default(1)
   avatar                     String?                      @db.VarChar(255)
   avatar_thumbnail           String?                      @db.VarChar(255)
@@ -56,8 +56,40 @@ model User {
   UserCapabilities           UserCapabilities[]
   SupportTicket              SupportTicket[]
   SupportTicketMessage       SupportTicketMessage[]
+  Organization               Organization[]
+  StripeCustomer             StripeCustomer[]
 
   @@index([typeId, languageId])
+}
+
+model Organization {
+  id                       Int                        @id @default(autoincrement())
+  name                     String
+  externalId               String?                    @unique @db.VarChar(255)
+  externalAttributes       String?                    @db.Text
+  userId                   Int
+  user                     User                       @relation(fields: [userId], references: [id])
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  OrganizationSetting      OrganizationSetting[]
+  Invoice                  Invoice[]
+  Membership               Membership?
+  OrganizationCapabilities OrganizationCapabilities[]
+
+  @@index([userId])
+}
+
+model StripeCustomer {
+  id         Int      @id @default(autoincrement())
+  model      String
+  modelId    Int
+  customerId String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  User       User?    @relation(fields: [userId], references: [id])
+  userId     Int?
+
+  @@index([model, modelId])
 }
 
 model FrontendComponent {
@@ -75,25 +107,29 @@ model FrontendComponent {
 }
 
 model Invoice {
-  id            Int             @id @default(autoincrement())
-  userId        Int             @db.Int
-  user          User            @relation(fields: [userId], references: [id])
-  currency      AdminCurrencies @relation(fields: [currencyId], references: [id])
-  currencyId    Int             @default(1)
-  gateway       String          @db.VarChar(56)
-  gatewayId     String?         @db.VarChar(512)
-  model         String?         @db.VarChar(512)
-  modelId       Int?
-  details       String?         @db.VarChar(512)
-  amount        Float
-  invoiceUrl    String?         @db.VarChar(512)
-  invoicePdfUrl String?         @db.VarChar(512)
-  status        String          @default("ACTIVE")
-  paidAt        DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id                     Int             @id @default(autoincrement())
+  userId                 Int?            @db.Int
+  organizationId         Int?            @db.Int
+  userCustomerExternalId String?         @db.VarChar(512)
+  user                   User?           @relation(fields: [userId], references: [id])
+  organization           Organization?   @relation(fields: [organizationId], references: [id])
+  currency               AdminCurrencies @relation(fields: [currencyId], references: [id])
+  currencyId             Int             @default(1)
+  gateway                String?         @db.VarChar(56)
+  gatewayId              String?         @db.VarChar(512)
+  model                  String?         @db.VarChar(512)
+  modelId                Int?
+  details                String?         @db.VarChar(512)
+  amount                 Float           @default(0)
+  invoiceUrl             String?         @db.VarChar(512)
+  invoicePdfUrl          String?         @db.VarChar(512)
+  subscriptionExternalId String?         @db.VarChar(512)
+  status                 String          @default("ACTIVE")
+  paidAt                 DateTime?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 
-  @@index([userId, currencyId])
+  @@index([userId, currencyId, organizationId])
 }
 
 model Conversation {
@@ -150,15 +186,19 @@ model UserStatus {
 }
 
 model Membership {
-  id               Int       @id @default(autoincrement())
-  user             User      @relation(fields: [userId], references: [id])
-  userId           Int       @unique
-  plan             Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  id               Int           @id @default(autoincrement())
+  user             User?         @relation(fields: [userId], references: [id])
+  userId           Int?          @unique
+  organization     Organization? @relation(fields: [organizationId], references: [id])
+  organizationId   Int?          @unique
+  plan             Plan          @relation(fields: [planId], references: [id], onDelete: Cascade)
   planId           Int
   startDate        DateTime
   endDateFreeTrial DateTime?
   endDate          DateTime
-  createdAt        DateTime  @default(now())
+  createdAt        DateTime      @default(now())
+
+  @@index([userId, organizationId])
 }
 
 model PlanPermission {
@@ -244,12 +284,13 @@ model Permission {
 }
 
 model Capabilitie {
-  id               Int                @id @default(autoincrement())
-  name             String
-  description      String?            @db.Text
-  type             String             @default("LIMIT")
-  PlanCapabilities PlanCapabilities[]
-  UserCapabilities UserCapabilities[]
+  id                       Int                        @id @default(autoincrement())
+  name                     String
+  description              String?                    @db.Text
+  type                     String                     @default("LIMIT")
+  PlanCapabilities         PlanCapabilities[]
+  UserCapabilities         UserCapabilities[]
+  OrganizationCapabilities OrganizationCapabilities[]
 }
 
 model PlanCapabilities {
@@ -275,6 +316,17 @@ model UserCapabilities {
   @@index([userId, capabilitieId])
 }
 
+model OrganizationCapabilities {
+  id             Int          @id @default(autoincrement())
+  capabilitieId  Int
+  organizationId Int
+  count          Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  capabilitie    Capabilitie  @relation(fields: [capabilitieId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, capabilitieId])
+}
+
 model RolePermission {
   id           Int        @id @default(autoincrement())
   role         Role       @relation(fields: [roleId], references: [id])
@@ -293,6 +345,16 @@ model UserSetting {
   settingValue String @db.Text
 
   @@index([userId])
+}
+
+model OrganizationSetting {
+  id             Int          @id @default(autoincrement())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId Int
+  settingName    String       @db.VarChar(128)
+  settingValue   String       @db.Text
+
+  @@index([organizationId])
 }
 
 model PlanSetting {

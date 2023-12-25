@@ -135,7 +135,6 @@ type Avatar {
 
 
  extend type Query {
- 
     me: User,
     getUser(
      username: String!
@@ -147,6 +146,7 @@ type Avatar {
     ): [User],
     getUserSetting(userId: Int, settingName: String!): Setting
     getUserNotification(userId: Int): [Notification]
+    getUserCapabilitie: [UserCapabilitieType]
   }
   
   type Mutation {
@@ -181,6 +181,15 @@ type Avatar {
 
 const resolvers = {
   Query: {
+    getUserCapabilitie: async (root: any, args: any, context: MyContext) => {
+      const userCapabilitie = await prisma.userCapabilities.findMany({
+        where: {
+          userId: context.user.id,
+        },
+      });
+
+      return userCapabilitie;
+    },
     me: (root: any, args: any, context: MyContext) => {
       return prisma.user.findUnique({
         where: { id: context.user.id },

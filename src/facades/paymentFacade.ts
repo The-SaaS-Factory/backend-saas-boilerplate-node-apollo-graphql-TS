@@ -137,105 +137,16 @@ export const connectStripePlanWithLocalPlan = async (localPlanId: number) => {
   }
 };
 
-export const createStripeSubscription = async (
-  plan: any,
-  user: any,
-  paymentMethod: any
-) => {
-  try {
-    let customerId = null;
-    const setting = user.UserSetting.find(
-      (setting: SettingType) => setting.settingName === "STRIPE_CUSTUMER_IR"
-    );
-
-    if (setting && setting.settingValue) {
-      customerId = setting.settingValue;
-    } else {
-      const customerPayload: any = {
-        email: user.email,
-        name: user.name,
-        paymentMethod,
-      };
-
-      const customer = await stripeCreateCustomer(customerPayload);
-      if (customer) {
-        customerId = customer.id;
-      }
-
-      saveStripeCustomerId(user.id, customerId);
-    }
-
-    if (customerId && plan) {
-      const stripePlanConnected = plan.settings.find(
-        (setting) => setting.settingName === "STRIPE_PLAN_ID"
-      );
-      if (stripePlanConnected) {
-        const suscriptionPayload: Stripe.SubscriptionCreateParams = {
-          customer: customerId,
-          items: [{ price: stripePlanConnected.settingValue }],
-          payment_settings: {
-            payment_method_options: {
-              card: {
-                request_three_d_secure: "any",
-              },
-            },
-            payment_method_types: ["card"],
-            save_default_payment_method: "on_subscription",
-          },
-          expand: ["latest_invoice.payment_intent"],
-        };
-
-        const subscription: any = await stripeCreateSuscription(
-          suscriptionPayload
-        );
-
-        const payloadInvoice: InvoiceType = {
-          userId: user.id,
-          currencyId: 1, // #fix
-          gateway: "stripe",
-          gatewayId: subscription.latest_invoice.id,
-          amount: plan.price,
-          model: "plan",
-          modelId: plan.id,
-          details: "Buy Plan Membership " + plan.name,
-          invoiceUrl: subscription.latest_invoice.hosted_invoice_url,
-          invoicePdfUrl: subscription.latest_invoice.invoice_pdf,
-          status: "PENDING",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        createInvoice(payloadInvoice);
-
-        console.log(subscription);
-
-        return {
-          clientSecret:
-            subscription.latest_invoice.payment_intent.client_secret,
-          subscriptionId: subscription.id,
-          payment_intent_id: subscription.latest_invoice.payment_intent.id,
-          invoice_url: subscription.latest_invoice.hosted_invoice_url,
-          invoice_id: subscription.latest_invoice.id,
-          invoice_pdf_url: subscription.latest_invoice.invoice_pdf,
-        };
-      } else {
-        throw new Error("Plan not connected with Stripe");
-      }
-    }
-  } catch (error) {
-    throw new Error(error.message);
-  }
-};
-
 export const saveStripeCustomerId = async (
-  userId: number,
+  model: string,
+  modelId: number,
   customerId: string
 ) => {
-  await prisma.userSetting.create({
+  return await prisma.stripeCustomer.create({
     data: {
-      settingName: "STRIPE_CUSTUMER_IR",
-      settingValue: customerId,
-      userId: userId,
+      model: model,
+      modelId: modelId,
+      customerId: customerId,
     },
   });
 };
@@ -279,7 +190,7 @@ export const stripeEventPaymentFailed = async (eventData) => {
 export const invoicePaid = async (invoiceId) => {
   let invoice = await prisma.invoice.findFirst({
     where: {
-      gatewayId: invoiceId,
+      id: invoiceId,
     },
     include: {
       user: true,
@@ -297,7 +208,9 @@ export const invoicePaid = async (invoiceId) => {
       if (plan) {
         let months = 1;
 
-        switch (plan.type) {
+        switch (
+          plan.type //Fix this, put the type in the plan in a global constant for create plan with some type
+        ) {
           case "month":
             months = 1;
             break;
@@ -325,21 +238,22 @@ export const invoicePaid = async (invoiceId) => {
             break;
         }
 
-        const membership = await updateMembership(
-          prisma,
-          invoice.userId,
-          invoice.modelId,
+        const membership = await updateMembership({
+          model: invoice.userId ? "User" : "Organization",
+          modelId: invoice.userId ? invoice.userId : invoice.organizationId,
           months,
-          false
-        );
+          freeTrial: false,
+          planId: plan.id,
+        });
+
         const payload = {
           status: "PAID",
           paidAt: new Date(),
-          model: "plan",
+          model: "membership",
           modelId: membership.id,
         };
         updateInvoice(invoice.id, payload);
-
+        invoice.userId &&
         sendInternalNotificatoin(invoice.userId, "Payment success", "");
         notifyAdmin(
           "payment_success",

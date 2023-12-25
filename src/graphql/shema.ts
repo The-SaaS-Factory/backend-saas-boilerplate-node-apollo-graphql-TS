@@ -17,6 +17,11 @@ import {
 } from "./currencies.js";
  
 import {
+  typeDefs as OrganizationTypes,
+  resolvers as OrganizationResolvers,
+} from "./organization.js";
+ 
+import {
   typeDefs as AdministrationTypes,
   resolvers as AdministrationResolvers,
 } from "./administration.js";
@@ -36,6 +41,7 @@ const typeDefs = [
   EconomyTypes,
   MembershipTypes,
   UsersTypes,
+  OrganizationTypes,
   InvoiceTypes,
   SupportTypes,
   CurrenciesTypes,
@@ -47,6 +53,7 @@ const resolvers = [
   MembershipResolvers,
   InvoiceResolvers,
   SuportResolvers,
+  OrganizationResolvers,
   CurrenciesResolvers,
   AdministrationResolvers,
 ];

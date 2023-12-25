@@ -30,7 +30,7 @@ export async function updateUserInEmailList(userId: number, listId: number) {
   }
 }
 
-export const checkMarketingActionsForNewUser = async (user) => {
+export const checkMarketingActionsForNewUser = async (model, modelId) => {
   //Check free trial config
   const freeTrial = await prisma.superAdminSetting.findFirst({
     where: {
@@ -61,7 +61,13 @@ export const checkMarketingActionsForNewUser = async (user) => {
         const months = calculateMonthsFromDays(
           days ? parseInt(days.settingValue) : 14
         );
-        updateMembership(prisma, user.id, plan.id, months, true);
+        updateMembership({
+          model,
+          modelId,
+          months,
+          freeTrial: true,
+          planId: plan.id,
+        });
       } else {
         //send log
         //#Fix add module of logs/actions for super admin,

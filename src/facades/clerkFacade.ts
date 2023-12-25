@@ -1,8 +1,13 @@
-import { WebhookEvent } from "@clerk/clerk-sdk-node";
+import clerkClient, { WebhookEvent } from "@clerk/clerk-sdk-node";
 import { Webhook } from "svix";
 import { Response } from "express";
 import { handleUserCreated, handleUserUpdated } from "./userFacade.js";
-
+import { PrismaClient } from "@prisma/client";
+import {
+  handleCreateOrganization,
+  handleOrganizationUpdated,
+} from "./organizationFacade.js";
+const prisma = new PrismaClient();
 
 export const handleWebhook = async (req, res) => {
   // Check if the 'Signing Secret' from the Clerk Dashboard was correctly provided
@@ -64,7 +69,99 @@ const handleEventWebhook = async (evt: WebhookEvent) => {
     case "user.updated":
       await handleUserUpdated(evt.data);
       break;
+    case "organization.created":
+      await handleCreateOrganization(evt.data);
+      break;
+    case "organization.updated":
+      await handleOrganizationUpdated(evt.data);
+      break;
   }
 };
 
+const getUserClerkId = async (userId: number) => {
+  return await prisma.user.findFirst({
+    where: {
+      id: userId,
+    },
+    select: {
+      externalId: true,
+    },
+  });
+};
+
+const getOrganizationClerkById = async (organizationId: number) => {
+  return await prisma.organization.findFirst({
+    where: {
+      id: organizationId,
+    },
+    select: {
+      externalId: true,
+    },
+  });
+};
+
+export const getOrganizationMembers = async (organizationId: string) => {
+  return await clerkClient.organizations.getOrganizationMembershipList({
+    organizationId,
+  });
+};
+
+export const handleUpdateDataForUser = async ({
+  scope,
+  userBdId,
+  data,
+}: {
+  scope: string;
+  userBdId: number;
+  data: any;
+}) => {
+  const userId = (await getUserClerkId(userBdId)).externalId;
+
+  if (!userId) throw new Error("User not found");
+
+  if (scope === "publicMetadata") {
+    await clerkClient.users.updateUserMetadata(userId, {
+      publicMetadata: data,
+    });
+  }
+
+  if (scope === "privateMetadata") {
+    await clerkClient.users.updateUserMetadata(userId, {
+      privateMetadata: data,
+    });
+  }
+
+  if (scope === "unsafeMetadata") {
+    await clerkClient.users.updateUserMetadata(userId, {
+      unsafeMetadata: data,
+    });
+  }
+};
+
+export const handleUpdateDataForOrganization = async ({
+  scope,
+  organizationBdId,
+  data,
+}: {
+  scope: string;
+  organizationBdId: number;
+  data: any;
+}) => {
+  const organizationId = (await getOrganizationClerkById(organizationBdId))
+    .externalId;
+
+  if (!organizationId) throw new Error("User not found");
+
+  if (scope === "publicMetadata") {
+    await clerkClient.organizations.updateOrganizationMetadata(organizationId, {
+      publicMetadata: data,
+    });
+  }
+
+  if (scope === "privateMetadata") {
+    await clerkClient.organizations.updateOrganizationMetadata(organizationId, {
+      privateMetadata: data,
+    });
+  }
  
+};

@@ -11,7 +11,6 @@ import {
 } from "../facades/membershipFacade.js";
 import {
   connectStripePlanWithLocalPlan,
-  createStripeSubscription,
 } from "../facades/paymentFacade.js";
 
 const typeDefs = `#graphql
@@ -72,6 +71,7 @@ type SubscriptionStripePaymentTpe {
         getAllPlans: [PlanType]
         getAllCapabilities: [CapabilitieType]
         getAllSubscriptions: [Membership]
+        getPlanByName(name: String!): PlanType
     }
   
   type Mutation {
@@ -84,8 +84,6 @@ type SubscriptionStripePaymentTpe {
           status: String
           description: String
         ): Plan,
-        buyPlan(planId: Int!, gateway: String): Boolean
-        buyPlanWithStripe(planId: Int!, gateway: String, gatewayPayload:String!): SubscriptionStripePaymentTpe
         connectStripePlanWithLocalPlan(planId:Int!): Boolean
         disconectStripePlanWithLocalPlan(planId:Int!): Boolean
         connectCapabilitieWithPlan(planId:Int!,capabilitieId:Int!, count: Int, name: String): PlanCapabilitieType
@@ -96,6 +94,24 @@ type SubscriptionStripePaymentTpe {
 
 const resolvers = {
   Query: {
+    getPlanByName: async (root: any, args: any, context: MyContext) => {
+      return await prisma.plan.findFirst({
+        where: {
+          name: args.name,
+        },
+        include: {
+          settings: true,
+          PlanCapabilities: {
+            include: {
+              capabilitie: true,
+            },
+            orderBy: {
+              capabilitieId: "asc",
+            },
+          },
+        },
+      });
+    },
     getAllPlans: async (root: any, args: any, context: MyContext) => {
       return await prisma.plan.findMany({
         include: {
@@ -178,6 +194,7 @@ const resolvers = {
           },
         });
 
+        //For all users and organizations with membership with this plan, propagate the new capabilities
         !oldConection &&
           propagateCapabilitiesOnAsociateWithPlanNewCapabilitie(args.planId);
 
@@ -248,89 +265,6 @@ const resolvers = {
           status: args.status,
         },
       });
-    },
-    buyPlan: async (root: any, args: any, context: MyContext) => {
-      const plan = await prisma.plan.findFirst({
-        where: {
-          id: args.planId,
-        },
-        include: {
-          settings: true,
-        },
-      });
-
-      const user = await prisma.user.findUnique({
-        where: {
-          id: context.user.id,
-        },
-        include: {
-          UserSetting: true,
-        },
-      });
-
-      if (plan && user) {
-        let months = 0;
-
-        switch (plan.type) {
-          case "month":
-            months = 1;
-            break;
-          case "year":
-            months = 12;
-            break;
-
-          default:
-            months = 1;
-            break;
-        }
-
-        await updateMembership(prisma, context.user.id, plan.id, months, false);
-
-        return true;
-      } else {
-        throw new Error("Plan not found");
-      }
-    },
-    buyPlanWithStripe: async (root: any, args: any, context: MyContext) => {
-      const plan = await prisma.plan.findFirst({
-        where: {
-          id: args.planId,
-        },
-        include: {
-          settings: true,
-        },
-      });
-
-      const user = await prisma.user.findUnique({
-        where: {
-          id: context.user.id,
-        },
-        include: {
-          UserSetting: true,
-        },
-      });
-
-      if (plan && user) {
-        try {
-          if (args.gateway === "stripe") {
-            return await createStripeSubscription(
-              plan,
-              user,
-              args.gatewayPayload
-            );
-          }
-        } catch (error) {
-          console.log(error);
-          throw new Error(error.message);
-        }
-        return {
-          clientSecret: "",
-          subscriptionId: "",
-        };
-        // await updateMembership(prisma, context.user.id, plan.id, months);
-      } else {
-        throw new Error("Plan not found");
-      }
     },
   },
 };

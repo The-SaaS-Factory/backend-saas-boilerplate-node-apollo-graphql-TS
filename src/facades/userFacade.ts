@@ -51,12 +51,8 @@ export const getUser = async (token: string) => {
   try {
     if (token) {
       const decodedToken: any = jwt.decode(token);
-
       const userId = decodedToken?.sub;
- 
-      console.log("userId", userId);
-      
-       return userId
+      return userId;
     } else {
     }
   } catch (error) {
@@ -83,16 +79,13 @@ export const handleUserCreated = async (userData) => {
       },
     });
 
-    // if (
-    //   userData.email_addresses.length > 0 &&
-    //   userData.email_addresses[0].email_address
-    // ) {
-    //   const email = userData.email_addresses[0].email_address;
+    
     if (newUser.email) {
       sendWelcomeEmail(newUser);
     }
-    checkMarketingActionsForNewUser(newUser);
-    // }
+
+    checkMarketingActionsForNewUser('User', newUser.id);
+    
 
     await createDefaultSettingForuser(newUser);
   } else {

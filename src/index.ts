@@ -57,13 +57,13 @@ app.use(bodyParser.text({ limit: "2000mb" }));
 app.use(cors<cors.CorsRequest>());
 app.use("/v1", routes);
 app.post(
-  "/api/v1/clerk/webhook",
+  "/api/v1/api/v1/clerk/webhook",
   bodyParser.raw({ type: "application/json" }),
   async function (req, res) {
     return await handleWebhook(req, res);
   }
 );
-app.use("/v1", payments);
+app.use("/api/v1", payments);
 
 cron.schedule("0 0 * * *", async () => {
   try {

@@ -13,7 +13,16 @@ import {
 import { notifyAdmin, sendInternalNotificatoin } from "./notificationFacade.js";
 import { InvoiceType } from "../types/paymentsTypes.js";
 import { getPlanByStripePlanId } from "./membershipFacade.js";
-import { Plan } from "@prisma/client";
+import { Plan, PrismaClient } from "@prisma/client";
+import { SettingType } from "../types/User.js";
+
+type ClientSessionPayloadType = {
+  customerId?: string;
+  modelId: string;
+  email?: string;
+};
+
+const prisma = new PrismaClient();
 
 const makeStripeClient = async () => {
   const stripeMode = await getSuperAdminSetting("STRIPE_MODE");
@@ -35,6 +44,7 @@ const makeStripeClient = async () => {
 export const stripeWebhook = async (requestBody, response) => {
   const stripe = await makeStripeClient();
   const payload = requestBody;
+
   const endpointSecret = await getSuperAdminSetting("STRIPE_ENDPOINT_SECRET");
 
   const payloadString = JSON.stringify(payload, null, 2);
@@ -47,6 +57,8 @@ export const stripeWebhook = async (requestBody, response) => {
 
   const event = stripe.webhooks.constructEvent(payloadString, header, secret);
   const eventData = event.data.object as Stripe.PaymentIntent;
+
+  console.log("eventData", event.type);
 
   try {
     switch (event.type) {
@@ -70,10 +82,77 @@ export const stripeWebhook = async (requestBody, response) => {
   }
 };
 
-export const stripeEventInvoicePaid = async (eventData) => {
-  return invoicePaid(eventData.id);
+export const stripeGetClientByCustomerId = async (customerId: string) => {
+  const client = await prisma.stripeCustomer.findFirst({
+    where: {
+      customerId: customerId,
+    },
+  });
+
+  return client;
 };
 
+export const stripeEventInvoicePaid = async (eventData: any) => {
+  try {
+    let plan = null;
+    const subscription: any = await stripeRetriveSubscription(
+      eventData.subscription
+    );
+
+    if (subscription) {
+      plan = await getPlanByStripePlanId(subscription.plan.id);
+    }
+
+    const client = await stripeGetClientByCustomerId(eventData.customer); //Can be user or organization
+
+    console.log("invoice paid event,Part 1Client", client);
+
+    const userId = client
+      ? client.model === "User"
+        ? client.modelId
+        : null
+      : null;
+    const organizationId = client
+      ? client.model === "Organization"
+        ? client.modelId
+        : null
+      : null;
+
+    console.log("invoice paid event,Part 2", organizationId);
+
+    const payloadInvoice: InvoiceType = {
+      subscriptionExternalId: subscription ? subscription.id : null,
+      userCustomerExternalId: eventData.customer ?? null,
+      userId: client && client.model === "User" ? userId : null,
+      organizationId:
+        client && client.model === "Organization" ? organizationId : null,
+      currencyId: (await getCurrencyIdByCode(eventData.currency)) ?? 1,
+      gateway: "stripe",
+      gatewayId: eventData.id,
+      amount: eventData.amount_paid / 100,
+      model: plan ? "plan" : null,
+      modelId: plan ? plan.id : null,
+      details: "Subscription paid for " + plan.name,
+      invoiceUrl: eventData.hosted_invoice_url,
+      invoicePdfUrl: eventData.invoice_pdf,
+      status: "COMPLETED",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const invoice = await createInvoice(payloadInvoice);
+
+    //Only active events for invoice paid with userId
+
+    if (invoice && (invoice.userId || invoice.organizationId)) {
+      invoicePaid(invoice.id);
+    }
+
+    return "ok";
+  } catch (error) {
+    console.log(error);
+  }
+};
 export const stripeRetriveSubscription = async (subscriptionId: string) => {
   const stripe = await makeStripeClient();
   return await stripe.subscriptions.retrieve(subscriptionId);
@@ -85,44 +164,81 @@ export const stripeRetriveInvoice = async (invoiceId: string) => {
 
 export const stripeEventCheckoutCompleted = async (eventData) => {
   try {
-    const userId: number = parseInt(eventData.client_reference_id);
-    const subscription: any = await stripeRetriveSubscription(
-      eventData.subscription
-    );
-    const invoiceStripe: any = await stripeRetriveInvoice(
-      subscription.latest_invoice
-    );
-    const plan: Plan = await getPlanByStripePlanId(subscription.plan.id);
+    //Sync customer stripe with user or organization by client_reference_id
+    let client = null;
+    let model = null;
+    const clientReference: string = eventData.client_reference_id;
 
-    console.log("invoiceStripe", plan);
-    console.log("userId", userId);
+    const scope = clientReference.split("-")[0];
+    const id = clientReference.split("-")[1];
 
-    if (userId && plan && invoiceStripe && subscription) {
-      saveStripeCustomerId(userId, eventData.customer);
-
-      const payloadInvoice: InvoiceType = {
-        userId: userId,
-        currencyId: (await getCurrencyIdByCode(eventData.currency)) ?? 1,
-        gateway: "stripe",
-        gatewayId: invoiceStripe.id,
-        amount: plan.price,
-        model: "plan",
-        modelId: plan.id,
-        details: "Buy Plan Membership " + plan.name,
-        invoiceUrl: invoiceStripe.hosted_invoice_url,
-        invoicePdfUrl: invoiceStripe.invoice_pdf,
-        status: "PENDING",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      const invoice = await createInvoice(payloadInvoice);
-
-      invoicePaid(invoice.gatewayId);
-    } else {
-      //Fix this, store this events in a table for later check
+    if (scope === "U") {
+      client = await prisma.stripeCustomer.findFirst({
+        where: {
+          model: "User",
+          modelId: parseInt(id),
+          customerId: eventData.customer,
+        },
+      });
+      model = "User";
+    } else if (scope === "O") {
+      client = await prisma.stripeCustomer.findFirst({
+        where: {
+          model: "Organization",
+          modelId: parseInt(id),
+          customerId: eventData.customer,
+        },
+      });
+      model = "Organization";
     }
+
+    if (!client) {
+      await saveStripeCustomerId(model, parseInt(id), eventData.customer);
+    }
+
+    await checkInvoicesWithOutUserId(eventData.invoice, model, parseInt(id));
+
+  
+
+    return "ok";
   } catch (error) {
     console.log(error);
+  }
+};
+
+const checkInvoicesWithOutUserId = async (
+  invoiceId: string,
+  model: string,
+  modelId: number
+) => {
+  const invoice = await prisma.invoice.findFirst({
+    where: {
+      gatewayId: invoiceId,
+    },
+  });
+
+  if (invoice && !invoice.userId && model === "User") {
+    await prisma.invoice.update({
+      where: {
+        id: invoice.id,
+      },
+      data: {
+        userId: modelId,
+      },
+    });
+
+    invoicePaid(invoice.id);
+  } else if (invoice && !invoice.organizationId && model === "Organization") {
+    await prisma.invoice.update({
+      where: {
+        id: invoice.id,
+      },
+      data: {
+        organizationId: modelId,
+      },
+    });
+
+    invoicePaid(invoice.id);
   }
 };
 
@@ -157,13 +273,28 @@ export const stripeCreatePlan = async (
 export const stripeCreateCustomer = async (customerPayload: any) => {
   try {
     const stripe = await makeStripeClient();
+    const paymentMethod = await stripCreatePaymentMethod();
+
+    if (!paymentMethod) throw new Error("Error creating payment method");
+
     return await stripe.customers.create({
-      name: customerPayload.name,
-      email: customerPayload.email,
-      payment_method: customerPayload.paymentMethod,
+      name: customerPayload.name ?? null,
+      email: customerPayload.email ?? null,
+      payment_method: customerPayload.paymentMethod.id,
       invoice_settings: {
-        default_payment_method: customerPayload.paymentMethod,
+        default_payment_method: customerPayload.paymentMethod.id,
       },
+    });
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+export const stripCreatePaymentMethod = async () => {
+  try {
+    const stripe = await makeStripeClient();
+    return await stripe.paymentMethods.create({
+      type: "card",
     });
   } catch (error) {
     throw new Error(error.message);
@@ -172,7 +303,7 @@ export const stripeCreateCustomer = async (customerPayload: any) => {
 
 export const stripeCreateCheckoutSession = async (
   payload: any,
-  clientPayload: any,
+  clientPayload: ClientSessionPayloadType,
   res: any
 ) => {
   try {
@@ -186,9 +317,12 @@ export const stripeCreateCheckoutSession = async (
           quantity: 1,
         },
       ],
-      client_reference_id: clientPayload.userId,
+      client_reference_id: clientPayload.modelId,
       currency: !clientPayload.customerId ? payload.currency : "usd", //old client can't change currency #Fix This
       mode: "subscription",
+      metadata: {
+        modelId: clientPayload.modelId,
+      },
       success_url: `${domain}/home/billing/subscriptions/paymentCompleted`,
       cancel_url: `${domain}home/billing/subscriptions/paymentFailed`,
     };

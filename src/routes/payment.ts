@@ -20,26 +20,61 @@ payments.post(
 );
 
 payments.post("/stripe/create-checkout-session", async (request, response) => {
-  let customerId = null;
- 
-  const user = await prisma.user.findUnique({
-    where: { id: request.body.client_reference_id },
-    include: { UserSetting: true },
-  });
+  let client = null;
+  let modelId = null;
+  const clientRereferenceId = request.body.client_reference_id;
+  if (!clientRereferenceId) throw new Error("Client Id not found");
 
-  const setting = user.UserSetting.find(
-    (setting: SettingType) => setting.settingName === "STRIPE_CUSTUMER_IR"
-  );
+  const scope = clientRereferenceId.split("-")[0];
+  const id = clientRereferenceId.split("-")[1];
 
-  if (setting && setting.settingValue) {
-    customerId = setting.settingValue;
+  if (scope === "U") {
+    const user = await prisma.user.findFirst({
+      where: {
+        externalId: id,
+      },
+    });
+
+    if (!user) throw new Error("User not found");
+
+    client = await prisma.stripeCustomer.findFirst({
+      where: {
+        model: "User",
+        modelId: user.id,
+      },
+    });
+
+    modelId = `U-${user.id}`;
+
+  } else if (scope === "O") {
+    const organization = await prisma.organization.findFirst({
+      where: {
+        externalId: id,
+      },
+    });
+
+    if (!organization) throw new Error("Organization not found");
+
+    client = await prisma.stripeCustomer.findFirst({
+      where: {
+        model: "Organization",
+        modelId: organization.id,
+      },
+    });
+
+    modelId = `O-${organization.id}`;
   }
 
   const clientPayload = {
-    customerId,
-    userId: user.id,
+    customerId: client ? client.customerId : null,
+    modelId,
+    email: null, //Fix this
   };
 
-  return await stripeCreateCheckoutSession(request.body, clientPayload, response);
+  return await stripeCreateCheckoutSession(
+    request.body,
+    clientPayload,
+    response
+  );
 });
 export default payments;
