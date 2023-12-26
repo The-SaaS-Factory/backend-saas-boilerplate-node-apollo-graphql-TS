@@ -22,21 +22,16 @@ import payments from "./routes/payment.js";
 import { getUser } from "./facades/userFacade.js";
 import pkg from "body-parser";
 const { json } = pkg;
-import {
-  ClerkExpressWithAuth,
-  LooseAuthProp,
-  WithAuthProp,
-} from "@clerk/clerk-sdk-node";
+import { LooseAuthProp } from "@clerk/clerk-sdk-node";
 import { handleWebhook } from "./facades/clerkFacade.js";
 
+//Settings
 declare global {
   namespace Express {
     interface Request extends LooseAuthProp {}
   }
 }
-const timezone = "America/Sao_Paulo";
 
-const prisma = new PrismaClient();
 dotenv.config();
 
 const PORT = process.env.PORT || 8000;
@@ -51,11 +46,12 @@ app.use(
     parameterLimit: 50000,
   })
 );
-//Test
 
+//Api Router
 app.use(bodyParser.text({ limit: "2000mb" }));
 app.use(cors<cors.CorsRequest>());
-app.use("/v1", routes);
+app.use("/api/v1", routes);
+app.use("/api/v1", payments);
 app.post(
   "/api/v1/api/v1/clerk/webhook",
   bodyParser.raw({ type: "application/json" }),
@@ -63,8 +59,8 @@ app.post(
     return await handleWebhook(req, res);
   }
 );
-app.use("/api/v1", payments);
 
+//Cron Settings
 cron.schedule("0 0 * * *", async () => {
   try {
     generateKpi();
@@ -73,8 +69,7 @@ cron.schedule("0 0 * * *", async () => {
   }
 });
 
-app.use(express.static(path.join("client")));
-
+//Apollo Server
 const httpServer = http.createServer(app);
 
 const schema = makeExecutableSchema({
@@ -114,7 +109,7 @@ const authMiddleware = async (req, res, next) => {
   const token = BearerToken.replace("Bearer ", "");
 
   let user: any = null;
-  
+
   const currentTime = Date.now();
 
   // Try to find the user in the cache
@@ -147,7 +142,7 @@ app.use(
       // Get the user's device information from the request headers or wherever it's stored
       const deviceInfo = req.headers["user-agent"] || ""; // Adjust this to your needs
 
-      return { user, prisma, ipAddress, deviceInfo };
+      return { user, ipAddress, deviceInfo };
     },
   })
 );

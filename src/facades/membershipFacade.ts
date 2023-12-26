@@ -225,9 +225,6 @@ export const getInvoiceByModelAndModelId = async (model, modelId) => {
       model: model,
       modelId: modelId,
     },
-    include: {
-      currency: true,
-    },
   });
 };
 

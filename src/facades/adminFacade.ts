@@ -9,6 +9,14 @@ export const generateKpi = async () => {
       value: await prisma.user.count(),
     },
   });
+  
+  await prisma.adminKpi.create({
+    data: {
+      name: "organizations_count_total",
+      type: "counts",
+      value: await prisma.organization.count(),
+    },
+  });
 
   await prisma.adminKpi.create({
     data: {
@@ -31,6 +39,9 @@ export const generateKpi = async () => {
 
 async function getTotalInvoiceAmount() {
   const result = await prisma.invoice.aggregate({
+    where: {
+      status: "PAID",
+    },
     _sum: {
       amount: true,
     },
@@ -47,7 +58,7 @@ export const getCurrencyIdByCode = async (code: string) => {
   });
 
   return currency ? currency.id : null;
-}
+};
 
 export const getSuperAdminSetting = async (settingName: string) => {
   try {
@@ -63,7 +74,10 @@ export const getSuperAdminSetting = async (settingName: string) => {
   }
 };
 
-export const getAdminSettingValue = async (settingName: string, value: string) => {
+export const getAdminSettingValue = async (
+  settingName: string,
+  value: string
+) => {
   try {
     const setting = await prisma.userSetting.findFirst({
       where: {

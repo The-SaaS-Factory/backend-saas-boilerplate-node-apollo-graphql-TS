@@ -9,9 +9,7 @@ import {
   propagateCapabilitiesOnAsociateWithPlanNewCapabilitie,
   updateMembership,
 } from "../facades/membershipFacade.js";
-import {
-  connectStripePlanWithLocalPlan,
-} from "../facades/paymentFacade.js";
+import { connectStripePlanWithLocalPlan } from "../facades/paymentFacade.js";
 
 const typeDefs = `#graphql
 
@@ -56,6 +54,8 @@ type Membership {
     id: ID
     userId: Int
     user: User
+    organizationId: Int
+    organization: OrganizationType
     plan: PlanType
     startDate: String
     endDate: String
@@ -131,33 +131,45 @@ const resolvers = {
       return await prisma.capabilitie.findMany();
     },
     getAllSubscriptions: async (root: any, args: any, context: MyContext) => {
-      const memberships = await prisma.membership.findMany({
-        include: {
-          user: {
-            select: {
-              name: true,
-              avatar: true,
-              email: true,
-              username: true,
-              id: true,
+      try {
+        const memberships = await prisma.membership.findMany({
+          include: {
+            user: {
+              select: {
+                name: true,
+                avatar: true,
+                email: true,
+                username: true,
+                id: true,
+              },
             },
+            organization: {
+              select: {
+                name: true,
+                id: true,
+              },
+            },
+            plan: true,
           },
-          plan: true,
-        },
-      });
+        });
 
-      const membershipsWithInvoices = await Promise.all(
-        memberships.map(async (membership: any) => {
-          const invoice = await getInvoiceByModelAndModelId(
-            "MEMBERSHIP",
-            membership.id
-          );
+        const membershipsWithInvoices = await Promise.all(
+          memberships.map(async (membership: any) => {
+            const invoice = await getInvoiceByModelAndModelId(
+              "membership",
+              membership.id
+            );
 
-          return (membership.invoice = invoice);
-        })
-      );
+            return (membership.invoice = invoice);
+          })
+        );
 
-      return memberships;
+        return memberships;
+      } catch (error) {
+        console.log(error);
+        
+        throw new Error(error.message);
+      }
     },
   },
   Mutation: {

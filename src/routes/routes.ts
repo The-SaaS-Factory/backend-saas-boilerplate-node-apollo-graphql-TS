@@ -8,8 +8,6 @@ import { handleWebhook } from "../facades/clerkFacade.js";
 
 const router = express.Router();
 
-
-
 router.post("/saveImage", async (req, res) => {
   const image = req.body;
 
