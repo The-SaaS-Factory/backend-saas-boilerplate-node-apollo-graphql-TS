@@ -49,12 +49,20 @@ export async function createDefaultSettingForuser(user: User) {
 
 export const getUser = async (token: string) => {
   try {
-    if (token) {
-      const decodedToken: any = jwt.decode(token);
-      const userId = decodedToken?.sub;
-      return userId;
-    } else {
-    }
+    const decodedToken: any = jwt.decode(token);
+    const userId = decodedToken?.sub;
+
+    //Get user from BD
+    return await prisma.user.findFirst({
+      where: {
+        externalId: userId,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
   } catch (error) {
     console.log(error);
     throw new Error("Error with credentials");
@@ -79,13 +87,11 @@ export const handleUserCreated = async (userData) => {
       },
     });
 
-    
     if (newUser.email) {
       sendWelcomeEmail(newUser);
     }
 
-    checkMarketingActionsForNewUser('User', newUser.id);
-    
+    checkMarketingActionsForNewUser("User", newUser.id);
 
     await createDefaultSettingForuser(newUser);
   } else {

@@ -107,19 +107,46 @@ const server = new ApolloServer<MyContext>({
 
 await server.start();
 
+const userCache = {};
+
+const authMiddleware = async (req, res, next) => {
+  const BearerToken = req.headers.authorization || "";
+  const token = BearerToken.replace("Bearer ", "");
+
+  let user: any = null;
+  
+  const currentTime = Date.now();
+
+  // Try to find the user in the cache
+  if (userCache[token] && currentTime - userCache[token].timestamp < 77777777) {
+    user = userCache[token].user;
+  } else {
+    // Si no se encuentra en la caché o ha expirado, busca en la BD
+    user = await getUser(token);
+    // Almacena el resultado en la caché para futuras solicitudes
+    userCache[token] = { user, timestamp: currentTime };
+  }
+
+  req.user = user;
+  next();
+};
+
+app.use(authMiddleware);
+
 app.use(
   "/graphql",
   cors<cors.CorsRequest>(),
   json(),
   expressMiddleware(server, {
-    context: async ({ req }) => {
-      let token = req.headers.authorization || "";
-      //Remove Bearer from token
-      token = token.replace("Bearer ", "");
+    context: async ({ req }: { req: any }) => {
+      const user = req.user;
 
-      const user = await getUser(token as string);
+      // Get the user's IP address from the request object
       const ipAddress = req.ip || req.socket.remoteAddress || "";
-      const deviceInfo = req.headers["user-agent"] || "";
+
+      // Get the user's device information from the request headers or wherever it's stored
+      const deviceInfo = req.headers["user-agent"] || ""; // Adjust this to your needs
+
       return { user, prisma, ipAddress, deviceInfo };
     },
   })

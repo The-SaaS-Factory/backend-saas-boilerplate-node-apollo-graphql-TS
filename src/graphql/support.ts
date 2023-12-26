@@ -93,8 +93,6 @@ const resolvers = {
               user: {
                 select: {
                   name: true,
-                  avatar: true,
-                  username: true,
                   email: true,
                   id: true,
                   Membership: {
@@ -113,16 +111,8 @@ const resolvers = {
           },
         },
       });
-
-      //#Fix ACL
-      if (
-        ticket.userId === MyContext.user.id ||
-        (MyContext.user.UserRole[0] && MyContext.user.UserRole[0].roleId == 1)
-      ) {
-        return ticket;
-      } else {
-        throw new Error("Error 401");
-      }
+     
+      return ticket;
     },
   },
   Mutation: {
