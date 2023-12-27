@@ -1,66 +1,34 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, SuperAdminSetting } from "@prisma/client";
 import { updateMembership } from "./membershipFacade.js";
+import { calculateMonthsFromDays } from "./strFacade.js";
+import { getSuperAdminSetting } from "./adminFacade.js";
 const prisma = new PrismaClient();
 
 export async function updateUserInEmailList(userId: number, listId: number) {
-  const user = await prisma.user.findFirst({ where: { id: userId } });
-  const list = await prisma.marketingEmailListsMembers.findFirst({
-    where: {
-      listId: listId,
-      userId: user.id,
-      email: user.email,
-    },
-  });
-
-  if (list) {
-    await prisma.marketingEmailListsMembers.delete({
-      where: {
-        id: list.id,
-      },
-    });
-  } else {
-    await prisma.marketingEmailListsMembers.create({
-      data: {
-        listId: listId,
-        userId: user.id,
-        type: "PLATFORM",
-        email: user.email,
-      },
-    });
-  }
+  //Fix this
 }
 
-export const checkMarketingActionsForNewUser = async (model, modelId) => {
-  //Check free trial config
-  const freeTrial = await prisma.superAdminSetting.findFirst({
-    where: {
-      settingName: "MARKETING_FREE_TRIAL",
-    },
-  });
+export const checkMarketingActionsOnRegister = async (model, modelId) => {
+  activateFreeTrial( model, modelId);
+  sendWelcomeEmail(model, modelId);
+};
 
-  if (freeTrial && freeTrial.settingValue == "true") {
-    const planTrial = await prisma.superAdminSetting.findFirst({
-      where: {
-        settingName: "MARKETING_FREE_TRIAL_PLAN",
-      },
-    });
-    const days = await prisma.superAdminSetting.findFirst({
-      where: {
-        settingName: "MARKETING_FREE_DAYS",
-      },
-    });
+const activateFreeTrial = async (model, modelId) => {
+  const freeTrial: string = await getSuperAdminSetting("MARKETING_FREE_TRIAL");
+
+  if (freeTrial == "true") {
+    const planTrial = await getSuperAdminSetting("MARKETING_FREE_TRIAL_PLAN");
+    const days = await getSuperAdminSetting("MARKETING_FREE_DAYS");
 
     if (planTrial) {
       const plan = await prisma.plan.findUnique({
         where: {
-          id: parseInt(planTrial.settingValue),
+          id: parseInt(planTrial),
         },
       });
 
       if (plan) {
-        const months = calculateMonthsFromDays(
-          days ? parseInt(days.settingValue) : 14
-        );
+        const months = calculateMonthsFromDays(days ? parseInt(days) : 14);
         updateMembership({
           model,
           modelId,
@@ -76,10 +44,6 @@ export const checkMarketingActionsForNewUser = async (model, modelId) => {
   }
 };
 
-function calculateMonthsFromDays(days: number) {
-  const averageDaysPerMonth = 30.44;
-
-  const months = days / averageDaysPerMonth;
-
-  return months;
-}
+export const sendWelcomeEmail = async (model, modelId) => {
+  const welcomeEmail: string = await getSuperAdminSetting("MARKETING_WELCOME_EMAIL");
+};

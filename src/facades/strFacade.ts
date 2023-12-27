@@ -130,3 +130,11 @@ export const generateRandomNumber =() => {
   const max = 9999999999; // El número máximo de 10 cifras (10^10 - 1)
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+export function calculateMonthsFromDays(days: number) {
+  const averageDaysPerMonth = 30.44;
+
+  const months = days / averageDaysPerMonth;
+
+  return months;
+}

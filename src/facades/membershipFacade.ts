@@ -3,9 +3,18 @@ import {
   handleUpdateDataForOrganization,
   handleUpdateDataForUser,
 } from "./clerkFacade.js";
-import { handleOrganizationUpdated } from "./organizationFacade.js";
 const prisma = new PrismaClient();
 
+const getCurrentMembership = async (model, modelId) => {
+  return await prisma.membership.findFirst({
+    where: {
+      [model === "User" ? "userId" : "organizationId"]: modelId,
+    },
+    include: {
+      plan: true,
+    },
+  });
+};
 export const updateMembership = async ({
   model,
   modelId,
@@ -19,56 +28,19 @@ export const updateMembership = async ({
   freeTrial: boolean;
   planId: number;
 }) => {
-  let currentMemberShip = null;
+  let currentMemberShip = await getCurrentMembership(model, modelId);
 
-  if (model === "User") {
-    currentMemberShip = await prisma.membership.findFirst({
-      where: {
-        userId: modelId,
-      },
-    });
-
-    propagateCapabilitiesFromPlanToUser(planId, modelId);
-  } else if (model === "Organization") {
-    currentMemberShip = await prisma.membership.findFirst({
-      where: {
-        organizationId: modelId,
-      },
-    });
-
-    propagateCapabilitiesFromPlanToOrganization(planId, modelId);
-  }
-
-  const createPayload = {
-    userId: model === "User" ? modelId : null,
-    organizationId: model === "Organization" ? modelId : null,
-    planId: planId,
-    startDate: new Date(),
-    endDate: new Date(),
-  };
-
-  const endDate = currentMemberShip
-    ? new Date(currentMemberShip.endDate)
-    : new Date();
-
-  const days = months * 30.44;
-
-  const membership = await prisma.membership.upsert({
-    where: {
-      id: currentMemberShip ? currentMemberShip.id : 0,
-    },
-    create: createPayload,
-    update: {
-      planId: planId,
-      endDate: new Date(endDate.setMonth(endDate.getMonth() + months)),
-    },
-    include: {
-      plan: true,
-    },
+  const membership = await createMembership({
+    model,
+    modelId,
+    planId,
+    currentMemberShip,
+    months,
   });
 
-  //Update user in auth service
+  //Take action for model type
   if (model === "User") {
+    propagateCapabilitiesFromPlanToUser(planId, modelId);
     handleUpdateDataForUser({
       scope: "publicMetadata",
       data: {
@@ -80,6 +52,7 @@ export const updateMembership = async ({
       userBdId: modelId,
     });
   } else if (model === "Organization") {
+    propagateCapabilitiesFromPlanToOrganization(planId, modelId);
     handleUpdateDataForOrganization({
       scope: "publicMetadata",
       data: {
@@ -93,6 +66,40 @@ export const updateMembership = async ({
   }
 
   return membership;
+};
+
+const createMembership = async ({
+  model,
+  modelId,
+  planId,
+  currentMemberShip,
+  months,
+}) => {
+  const createPayload = {
+    userId: model === "User" ? modelId : null,
+    organizationId: model === "Organization" ? modelId : null,
+    planId: planId,
+    startDate: new Date(),
+    endDate: new Date(),
+  };
+
+  const endDate = currentMemberShip
+    ? new Date(currentMemberShip.endDate)
+    : new Date();
+
+  return await prisma.membership.upsert({
+    where: {
+      id: currentMemberShip ? currentMemberShip.id : 0,
+    },
+    create: createPayload,
+    update: {
+      planId: planId,
+      endDate: new Date(endDate.setMonth(endDate.getMonth() + months)),
+    },
+    include: {
+      plan: true,
+    },
+  });
 };
 
 export const propagateCapabilitiesOnAsociateWithPlanNewCapabilitie = async (

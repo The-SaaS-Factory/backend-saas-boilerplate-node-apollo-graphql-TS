@@ -9,20 +9,54 @@ import { handleWebhook } from "../facades/clerkFacade.js";
 const router = express.Router();
 
 router.post("/saveImage", async (req, res) => {
-  const image = req.body;
+  const image = JSON.parse(req.body);  
+ 
+  if (Array.isArray(image)) {
+    const imagesGenerate: any = await Promise.all(
+      image.map(async (img: any) => {
+        const imageGenerate: any = await imageKitFacade(
+          img,
+          generateRandomString(7)
+        );
 
-  const imageGenerate: any = await imageKitFacade(
-    image,
-    generateRandomString(7)
-  );
+        if (imageGenerate.error) {
+          console.log("Error", imageGenerate.error);
+          return res.status(500).json({ error: imageGenerate.error });
+        }
 
-  if (imageGenerate) {
-    res.status(200).json({
-      url: imageGenerate.url as string,
-      thumbnailUrl: imageGenerate.thumbnailUrl,
-    });
+        return {
+          url: imageGenerate.result.url as string,
+          thumbnailUrl: imageGenerate.result.thumbnailUrl,
+        };
+      })
+    );
+
+    if (imagesGenerate) {
+      res.status(200).json(imagesGenerate);
+    } else {
+      res.status(500);
+    }
   } else {
-    res.status(500);
+    const imageGenerate: any = await imageKitFacade(
+      image,
+      generateRandomString(7)
+    );
+
+    if (imageGenerate.error) {
+      console.log("Error", imageGenerate.error);
+      return res.status(500).json({ error: imageGenerate.error });
+    }
+
+    const reponse = {
+      url: imageGenerate.result.url as string,
+      thumbnailUrl: imageGenerate.result.thumbnailUrl,
+    };
+
+    if (imageGenerate) {
+      res.status(200).json(reponse);
+    } else {
+      res.status(500);
+    }
   }
 });
 

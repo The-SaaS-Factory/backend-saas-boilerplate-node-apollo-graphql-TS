@@ -1,23 +1,13 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient, Prisma } from "@prisma/client";
-import jwt from "jsonwebtoken";
-import { MovementType } from "../types/MovementsTypes";
 import { withFilter } from "graphql-subscriptions";
 import { MyContext } from "../types/MyContextInterface";
-import {
-  generateSecureResetCode,
-  generateUniqueUsername,
-} from "../facades/authFacade.js";
-import { traslate } from "../facades/strFacade.js";
 import pubsub from "../facades/pubSubFacade.js";
 import {
   checkSettingAction,
-  createDefaultSettingForuser,
 } from "../facades/userFacade.js";
-import { checkMarketingActionsForNewUser } from "../facades/marketingFacade.js";
-import { sendResetCodeEmail, sendWelcomeEmail } from "../facades/mailFacade.js";
-import { env } from "process";
-
+ 
+ 
 const prisma = new PrismaClient();
 
 const typeDefs = `#graphql

@@ -92,7 +92,7 @@ const typeDefs = `#graphql
   input SuperAdminSetting {
     settingName: String
     settingValue: String
-  }
+    }
 
 
 type Query {
@@ -418,7 +418,7 @@ const resolvers = {
       });
       return role;
     },
-   
+
     createPermission: async (root: any, args: any, context: MyContext) => {
       const permission = await prisma.permission.create({
         data: {

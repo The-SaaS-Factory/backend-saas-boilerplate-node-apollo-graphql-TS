@@ -46,11 +46,6 @@ model User {
   Notification               Notification[]
   Membership                 Membership[]
   UserStatus                 UserStatus[]
-  sentMessages               Message[]                    @relation("senderMessages")
-  receivedMessages           Message[]                    @relation("receiverMessages")
-  conversations              ConversationParticipant[]
-  MarketingEmailLists        MarketingEmailLists[]
-  MarketingEmailListsMembers MarketingEmailListsMembers[]
   UserNotes                  UserNotes[]
   invoices                   Invoice[]
   UserCapabilities           UserCapabilities[]
@@ -132,44 +127,7 @@ model Invoice {
   @@index([userId, currencyId, organizationId])
 }
 
-model Conversation {
-  id           Int                       @id @default(autoincrement())
-  ref          String                    @unique @default(uuid())
-  messages     Message[]                 @relation("messages")
-  status       ConversationType          @default(ACTIVE)
-  participants ConversationParticipant[] @relation("conversation")
-  createdAt    DateTime                  @default(now())
-  updatedAt    DateTime                  @updatedAt
-}
-
-model ConversationParticipant {
-  id                   Int          @id @default(autoincrement())
-  userId               Int          @db.Int
-  user                 User         @relation(fields: [userId], references: [id])
-  conversationId       String
-  conversation         Conversation @relation("conversation", fields: [conversationId], references: [ref])
-  hasSeenLatestMessage Boolean
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-
-  @@index([conversationId, userId])
-}
-
-model Message {
-  id             Int          @id @default(autoincrement())
-  conversationId String
-  conversation   Conversation @relation("messages", fields: [conversationId], references: [ref])
-  senderId       Int          @db.Int
-  content        String
-  viewed         Boolean
-  sender         User         @relation(name: "senderMessages", fields: [senderId], references: [id])
-  recipientId    Int?
-  recipient      User?        @relation(name: "receiverMessages", fields: [recipientId], references: [id])
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@index([conversationId, recipientId, senderId])
-}
+ 
 
 //Model user status
 model UserStatus {
@@ -449,28 +407,6 @@ model AdminMovementsAmounts {
   @@index([currencyId])
 }
 
-model MarketingEmailLists {
-  id      Int                          @id @default(autoincrement())
-  name    String
-  type    MarketingEmailListType       @default(PLATFORM)
-  user    User?                        @relation(fields: [userId], references: [id])
-  userId  Int?
-  members MarketingEmailListsMembers[]
-
-  @@index([userId])
-}
-
-model MarketingEmailListsMembers {
-  id     Int                    @id @default(autoincrement())
-  type   MarketingEmailListType @default(PLATFORM)
-  list   MarketingEmailLists    @relation(fields: [listId], references: [id])
-  listId Int
-  email  String
-  User   User?                  @relation(fields: [userId], references: [id])
-  userId Int?
-
-  @@index([email, listId, userId])
-}
 
 model SupportTicket {
   id          Int                     @id @default(autoincrement())

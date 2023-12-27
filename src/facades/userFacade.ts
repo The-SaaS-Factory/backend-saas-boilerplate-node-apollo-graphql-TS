@@ -1,36 +1,17 @@
 import { PrismaClient, User } from "@prisma/client";
 import { SettingType } from "../types/User";
 import {
-  checkMarketingActionsForNewUser,
-  updateUserInEmailList,
+  checkMarketingActionsOnRegister,
+  sendWelcomeEmail,
 } from "./marketingFacade.js";
 import jwt from "jsonwebtoken";
 import clerkClient from "@clerk/clerk-sdk-node";
+import { syncOrganizationsWithClerk } from "./organizationFacade.js";
 
 const prisma = new PrismaClient();
 
 export async function checkSettingAction(setting: SettingType) {
-  if (setting.settingName === "newPlatformNotification") {
-    const list = await prisma.marketingEmailLists.findFirst({
-      where: {
-        name: "newPlatformNotification",
-      },
-    });
-
-    if (!list) {
-      const listFinal = await prisma.marketingEmailLists.create({
-        data: {
-          name: "newPlatformNotification",
-          type: "PLATFORM",
-          userId: null,
-        },
-      });
-
-      updateUserInEmailList(setting.userId, listFinal.id);
-    } else {
-      updateUserInEmailList(setting.userId, list.id);
-    }
-  }
+  //Fix this
 }
 
 export async function createDefaultSettingForuser(user: User) {
@@ -86,6 +67,7 @@ export const handleUserCreated = async (userData) => {
   });
 
   if (!user) {
+    //Is possible that user can not be created by clerk, so we need to create it
     user = await prisma.user.create({
       data: {
         externalId: userData.id,
@@ -98,13 +80,16 @@ export const handleUserCreated = async (userData) => {
       },
     });
 
-    // if (user.email) { //Fix this
-    //   sendWelcomeEmail(user);
-    // }
+    if (user.email) {
+      sendWelcomeEmail(user);
+    }
 
-    checkMarketingActionsForNewUser("User", user.id);
+    checkMarketingActionsOnRegister("User", user.id);
 
     await createDefaultSettingForuser(user);
+
+    //Check if user has organization in clerk and create it
+    await syncOrganizationsWithClerk(user);
 
     return user;
   } else {
