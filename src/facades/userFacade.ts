@@ -47,7 +47,7 @@ export const getUser = async (token: string) => {
       const userClerk = await clerkClient.users.getUser(userId);
 
       if (userClerk) {
-        return await handleUserCreated(userClerk);
+        return await handleUserCreated(userClerk, "request");
       }
     } else {
       return user;
@@ -58,7 +58,7 @@ export const getUser = async (token: string) => {
   }
 };
 
-export const handleUserCreated = async (userData) => {
+export const handleUserCreated = async (userData, source = "webhook") => {
   let user = null;
   user = await prisma.user.findFirst({
     where: {
@@ -68,36 +68,46 @@ export const handleUserCreated = async (userData) => {
 
   if (!user) {
     //Is possible that user can not be created by clerk, so we need to create it
-    user = await prisma.user.create({
-      data: {
-        externalId: userData.id,
-        externalAttributes: JSON.stringify(userData),
-        username: userData.username,
-        email: userData.emailAddresses[0]?.emailAddress,
-        name: userData.fullName || userData.firstName,
-        phone: userData.primaryPhoneNumber,
-        avatar: userData.imageUrl,
-      },
-    });
-
-    if (user.email) {
-      sendWelcomeEmail(user);
+    if (source === "request") {
+      user = await prisma.user.create({
+        data: {
+          externalId: userData.id,
+          externalAttributes: JSON.stringify(userData),
+          username: userData.username,
+          email: userData.emailAddresses[0]?.emailAddress,
+          name: userData.fullName || userData.firstName,
+          phone: userData.primaryPhoneNumber,
+          avatar: userData.imageUrl,
+        },
+      });
+    } else {
+      user = await prisma.user.create({
+        data: {
+          externalId: userData.id,
+          externalAttributes: JSON.stringify(userData),
+          username: userData.username,
+          email: userData.email_addresses[0]?.email_address,
+          name: userData.fullName || userData.first_name,
+          avatar: userData.profile_image_url,
+        },
+      });
     }
 
+    
     checkMarketingActionsOnRegister("User", user.id);
 
-    await createDefaultSettingForuser(user);
+    createDefaultSettingForuser(user);
 
     //Check if user has organization in clerk and create it
-    await syncOrganizationsWithClerk(user);
+    syncOrganizationsWithClerk(user);
 
     return user;
   } else {
-    return handleUserUpdated(userData);
+    return handleUserUpdated(userData, "request");
   }
 };
 
-export const handleUserUpdated = async (userData) => {
+export const handleUserUpdated = async (userData, source = "webhook") => {
   const user = await prisma.user.findFirst({
     where: {
       externalId: userData.id,
@@ -105,11 +115,9 @@ export const handleUserUpdated = async (userData) => {
   });
 
   if (user) {
-    return await prisma.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
+    let dataUpdated = {};
+    if (source === "request") {
+      dataUpdated = {
         externalId: userData.id,
         externalAttributes: JSON.stringify(userData),
         username: userData.username,
@@ -117,7 +125,23 @@ export const handleUserUpdated = async (userData) => {
         name: userData.fullName || userData.firstName,
         phone: userData.primaryPhoneNumber,
         avatar: userData.imageUrl,
+      };
+    } else {
+      dataUpdated = {
+        externalId: userData.id,
+        externalAttributes: JSON.stringify(userData),
+        username: userData.username,
+        email: userData.email_addresses[0]?.email_address,
+        name: userData.fullName || userData.first_name,
+        avatar: userData.profile_image_url,
+      };
+    }
+
+    return await prisma.user.update({
+      where: {
+        id: user.id,
       },
+      data: dataUpdated,
     });
   } else {
     return handleUserCreated(userData);

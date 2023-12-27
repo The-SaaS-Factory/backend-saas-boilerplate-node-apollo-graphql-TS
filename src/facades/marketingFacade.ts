@@ -2,6 +2,7 @@ import { PrismaClient, SuperAdminSetting } from "@prisma/client";
 import { updateMembership } from "./membershipFacade.js";
 import { calculateMonthsFromDays } from "./strFacade.js";
 import { getSuperAdminSetting } from "./adminFacade.js";
+import { sendLoopsTransactionalEventToUser } from "./loopsEmailMarketingFacade.js";
 const prisma = new PrismaClient();
 
 export async function updateUserInEmailList(userId: number, listId: number) {
@@ -9,7 +10,7 @@ export async function updateUserInEmailList(userId: number, listId: number) {
 }
 
 export const checkMarketingActionsOnRegister = async (model, modelId) => {
-  activateFreeTrial( model, modelId);
+  activateFreeTrial(model, modelId);
   sendWelcomeEmail(model, modelId);
 };
 
@@ -45,5 +46,76 @@ const activateFreeTrial = async (model, modelId) => {
 };
 
 export const sendWelcomeEmail = async (model, modelId) => {
-  const welcomeEmail: string = await getSuperAdminSetting("MARKETING_WELCOME_EMAIL");
+  const loopActived: string = await getSuperAdminSetting("LOOPS_ENABLED");
+
+  if (loopActived == "true") {
+    const loopId: string = await getSuperAdminSetting("LOOPS_API_KEY");
+
+    if (loopId) {
+      if (model === "User") {
+        const user = await prisma.user.findUnique({
+          where: { id: parseInt(modelId) },
+        });
+        //Check email for user
+        const welcomeEmailForUserEnabled = await getSuperAdminSetting(
+          "MARKETING_WELCOME_EMAIL_FOR_USERS_ENABLED"
+        );
+
+        const welcomeEmailForUser = await getSuperAdminSetting(
+          "MARKETING_WELCOME_EMAIL_USER_TRANSACTIONALID"
+        );
+
+        if (
+          welcomeEmailForUserEnabled === "true" &&
+          user &&
+          welcomeEmailForUser
+        ) {
+          const payload = {
+            email: user.email,
+            transactionalId: welcomeEmailForUser,
+            dataVariables: {
+              name: user.name,
+            },
+          };
+
+          sendLoopsTransactionalEventToUser(payload);
+        }
+      }
+      if (model === "Organization") {
+        const organization = await prisma.organization.findUnique({
+          where: { id: parseInt(modelId) },
+          include: {
+            user: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        });
+        //Check email for organization
+        const welcomeEmailForOrganizationEnabled = await getSuperAdminSetting(
+          "MARKETING_WELCOME_EMAIL_FOR_ORGANIZATIONS_ENABLED"
+        );
+
+        const welcomeEmailForOrganization = await getSuperAdminSetting(
+          "MARKETING_WELCOME_EMAIL_ORGANIZATION_TRANSACTIONALID"
+        );
+
+        if (
+          welcomeEmailForOrganizationEnabled === "true" &&
+          organization &&
+          welcomeEmailForOrganization
+        ) {
+          const payload = {
+            email: organization.user.email,
+            transactionalId: welcomeEmailForOrganization,
+            dataVariables: {
+              name: organization.name,
+            },
+          };
+          sendLoopsTransactionalEventToUser(payload);
+        }
+      }
+    }
+  }
 };

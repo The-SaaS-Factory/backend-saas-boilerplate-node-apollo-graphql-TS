@@ -64,10 +64,10 @@ export const handleWebhook = async (req, res) => {
 const handleEventWebhook = async (evt: WebhookEvent) => {
   switch (evt.type) {
     case "user.created":
-      await handleUserCreated(evt.data);
+      await handleUserCreated(evt.data,'webhook');
       break;
     case "user.updated":
-      await handleUserUpdated(evt.data);
+      await handleUserUpdated(evt.data, "webhook");
       break;
     case "organization.created":
       await handleCreateOrganization(evt.data);
