@@ -93,7 +93,6 @@ export const handleUserCreated = async (userData, source = "webhook") => {
       });
     }
 
-    
     checkMarketingActionsOnRegister("User", user.id);
 
     createDefaultSettingForuser(user);

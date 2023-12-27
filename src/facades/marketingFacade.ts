@@ -2,7 +2,10 @@ import { PrismaClient, SuperAdminSetting } from "@prisma/client";
 import { updateMembership } from "./membershipFacade.js";
 import { calculateMonthsFromDays } from "./strFacade.js";
 import { getSuperAdminSetting } from "./adminFacade.js";
-import { sendLoopsTransactionalEventToUser } from "./loopsEmailMarketingFacade.js";
+import {
+  sendLoopsTransactionalEventToUser,
+  storeContactInLoopsAudience,
+} from "./loopsEmailMarketingFacade.js";
 const prisma = new PrismaClient();
 
 export async function updateUserInEmailList(userId: number, listId: number) {
@@ -12,6 +15,42 @@ export async function updateUserInEmailList(userId: number, listId: number) {
 export const checkMarketingActionsOnRegister = async (model, modelId) => {
   activateFreeTrial(model, modelId);
   sendWelcomeEmail(model, modelId);
+  storeContactInEmailProvider(model, modelId);
+};
+
+const storeContactInEmailProvider = async (model, modelId) => {
+  const storeContactEnabled: string = await getSuperAdminSetting(
+    "LOOPS_STORE_CONTACTS_ENABLED"
+  );
+
+  if (model === "User" && storeContactEnabled === "true") {
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(modelId) },
+    });
+
+    if (user) {
+      storeContactInLoopsAudience(user.email, user.name, "userRegistered");
+    }
+  } else if (model === "Organization" && storeContactEnabled === "true") {
+    const organization = await prisma.organization.findUnique({
+      where: { id: parseInt(modelId) },
+      include: {
+        user: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (organization) {
+      storeContactInLoopsAudience(
+        organization.user.email,
+        organization.name,
+        "organizationRegistered"
+      );
+    }
+  }
 };
 
 const activateFreeTrial = async (model, modelId) => {

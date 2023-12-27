@@ -1,7 +1,7 @@
 import { getSuperAdminSetting } from "./adminFacade.js";
 import fetch from "node-fetch";
 
-export async function storeContactInLoopsAudience(email: string, name: string) {
+export async function storeContactInLoopsAudience(email: string, name: string,userGroup:string) {
   const loopsEnabled = await getSuperAdminSetting("LOOPS_ENABLED");
 
   if (loopsEnabled === "true") {
@@ -13,8 +13,11 @@ export async function storeContactInLoopsAudience(email: string, name: string) {
         email: email,
         source: "api",
         firstName: name,
-        userGroup: "leads",
+        userGroup:  userGroup,
       };
+
+      console.log(data);
+      
 
       const response = await fetch(url, {
         method: "POST",
