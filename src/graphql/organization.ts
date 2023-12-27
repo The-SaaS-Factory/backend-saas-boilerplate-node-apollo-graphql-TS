@@ -35,6 +35,7 @@ const typeDefs = `#graphql
     }
 
     extend type Query {
+        getAllOrganizations: [OrganizationType]
         getOrganizationCapabilies(organizationId: Int): [OrganizationCapabilitiesType]
     }
 `;
@@ -49,6 +50,18 @@ const resolvers = {
       return await prisma.organizationCapabilities.findMany({
         where: {
           organizationId: args.organizationId,
+        },
+      });
+    },
+    getAllOrganizations: async (root: any, args: any, context: MyContext) => {
+      return await prisma.organization.findMany({
+        include: {
+          user: true,
+          Membership: {
+            include: {
+              plan: true,
+            },
+          },
         },
       });
     },

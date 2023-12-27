@@ -272,29 +272,24 @@ const resolvers = {
       return user;
     },
     getUsers: async (root: any, args: any) => {
-      let typeSelected: Prisma.UserWhereInput;
+      let whereSearch: Prisma.UserWhereInput;
       const limit = args.limit;
       const offset = args.offset;
-      typeSelected = {};
+      whereSearch = {};
 
-      // if (args.search) {  //Fix this
-      //   typeSelected = {
-      //     OR: [
-      //       {
-      //         username: {
-      //           contains: args.search,
-      //         },
-      //         name: {
-      //           contains: args.search,
-      //         },
-      //       },
-      //     ],
-      //   };
-      // }
+      if (args.search) {
+        whereSearch = {
+          name: {
+            contains: args.search,
+          },
+        };
+      }
+
+      console.log(args.search);
 
       const users = await prisma.user.findMany({
         where: {
-          ...typeSelected,
+          ...whereSearch,
         },
         skip: offset,
         take: limit,
@@ -328,7 +323,6 @@ const resolvers = {
     },
   },
   Mutation: {
-    
     markNotificationsAsRead: async (root: any, args: any, MyContext) => {
       try {
         const notifications = await prisma.notification.updateMany({
@@ -400,9 +394,7 @@ const resolvers = {
 
       return null;
     },
-   
-   
-   
+
     saveSetting: async (
       root: any,
       args: { settingName: string; settingValue: string },

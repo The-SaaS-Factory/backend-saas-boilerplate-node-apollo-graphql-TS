@@ -136,6 +136,10 @@ app.use(
     context: async ({ req }: { req: any }) => {
       const user = req.user;
 
+      if (!user) {
+        throw new Error("User not found");
+      }
+
       // Get the user's IP address from the request object
       const ipAddress = req.ip || req.socket.remoteAddress || "";
 

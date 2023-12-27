@@ -5,9 +5,7 @@ import {
   updateUserInEmailList,
 } from "./marketingFacade.js";
 import jwt from "jsonwebtoken";
-import { env } from "process";
 import clerkClient from "@clerk/clerk-sdk-node";
-import { sendWelcomeEmail } from "./mailFacade.js";
 
 const prisma = new PrismaClient();
 
@@ -53,7 +51,7 @@ export const getUser = async (token: string) => {
     const userId = decodedToken?.sub;
 
     //Get user from BD
-    return await prisma.user.findFirst({
+    const user = await prisma.user.findFirst({
       where: {
         externalId: userId,
       },
@@ -63,37 +61,52 @@ export const getUser = async (token: string) => {
         email: true,
       },
     });
+
+    if (!user) {
+      const userClerk = await clerkClient.users.getUser(userId);
+
+      if (userClerk) {
+        return await handleUserCreated(userClerk);
+      }
+    } else {
+      return user;
+    }
   } catch (error) {
     console.log(error);
-    throw new Error("Error with credentials");
+    throw new Error(error.message);
   }
 };
 
 export const handleUserCreated = async (userData) => {
-  const user = await prisma.user.findFirst({
+  let user = null;
+  user = await prisma.user.findFirst({
     where: {
       externalId: userData.id,
     },
   });
 
   if (!user) {
-    const newUser = await prisma.user.create({
+    user = await prisma.user.create({
       data: {
         externalId: userData.id,
         externalAttributes: JSON.stringify(userData),
         username: userData.username,
-        email: userData.email_addresses[0]?.email_address,
-        name: userData.first_name,
+        email: userData.emailAddresses[0]?.emailAddress,
+        name: userData.fullName || userData.firstName,
+        phone: userData.primaryPhoneNumber,
+        avatar: userData.imageUrl,
       },
     });
 
-    if (newUser.email) {
-      sendWelcomeEmail(newUser);
-    }
+    // if (user.email) { //Fix this
+    //   sendWelcomeEmail(user);
+    // }
 
-    checkMarketingActionsForNewUser("User", newUser.id);
+    checkMarketingActionsForNewUser("User", user.id);
 
-    await createDefaultSettingForuser(newUser);
+    await createDefaultSettingForuser(user);
+
+    return user;
   } else {
     return handleUserUpdated(userData);
   }
@@ -112,10 +125,13 @@ export const handleUserUpdated = async (userData) => {
         id: user.id,
       },
       data: {
+        externalId: userData.id,
         externalAttributes: JSON.stringify(userData),
         username: userData.username,
-        email: userData.email_addresses[0]?.email_address,
-        name: userData.first_name,
+        email: userData.emailAddresses[0]?.emailAddress,
+        name: userData.fullName || userData.firstName,
+        phone: userData.primaryPhoneNumber,
+        avatar: userData.imageUrl,
       },
     });
   } else {
