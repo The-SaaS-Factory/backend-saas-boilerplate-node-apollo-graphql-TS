@@ -5,9 +5,7 @@ import {
   stripeCreateCheckoutSession,
   stripeWebhook,
 } from "../facades/stripeFacade.js";
-import { getUser } from "../facades/userFacade.js";
 import { PrismaClient } from "@prisma/client";
-import { SettingType } from "../types/User.js";
 const prisma = new PrismaClient();
 const payments = express.Router();
 

@@ -318,13 +318,12 @@ export const stripeCreateCheckoutSession = async (
         },
       ],
       client_reference_id: clientPayload.modelId,
-      currency: !clientPayload.customerId ? payload.currency : "usd", //old client can't change currency #Fix This
       mode: "subscription",
       metadata: {
         modelId: clientPayload.modelId,
       },
-      success_url: `${domain}/home/billing/subscriptions/paymentCompleted`,
-      cancel_url: `${domain}home/billing/subscriptions/paymentFailed`,
+      success_url: `${domain}/home/settings?paymentStatus=success`,
+      cancel_url: `${domain}/home/settings?paymentStatus=error`,
     };
 
     if (clientPayload.customerId) {

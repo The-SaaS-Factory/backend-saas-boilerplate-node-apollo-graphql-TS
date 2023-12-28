@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
-
 import { MyContext } from "../types/MyContextInterface";
 
 const typeDefs = `#graphql
@@ -9,6 +8,8 @@ type InvoiceType {
     id: Int
     userId: Int
     user: User
+    organizationId: Int
+    organization: OrganizationType
     currency: CurrencyType
     currencyId: Int
     gateway: String
@@ -22,14 +23,24 @@ type InvoiceType {
     } 
    
  extend type Query {
-        getUserInvoice(userId:Int!): [InvoiceType]
-    }
-  
-
+    getUserInvoice(userId:Int!): [InvoiceType]
+    getAllInvoices: [InvoiceType]
+  }
 `;
 
 const resolvers = {
   Query: {
+    getAllInvoices: async (root: any, args: any, context: MyContext) => {
+      return await prisma.invoice.findMany({
+        include: {
+          user: true,
+          organization: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    },
     getUserInvoice: async (root: any, args: any, context: MyContext) => {
       return await prisma.invoice.findMany({
         where: {

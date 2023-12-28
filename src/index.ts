@@ -15,7 +15,6 @@ import { typeDefs } from "./graphql/shema.js";
 import cron from "node-cron";
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { DateTimeTypeDefinition } from "graphql-scalars";
-import path from "path";
 import routes from "./routes/routes.js";
 import { generateKpi } from "./facades/adminFacade.js";
 import payments from "./routes/payment.js";

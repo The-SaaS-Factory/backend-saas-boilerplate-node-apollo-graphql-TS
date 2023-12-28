@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 
 export const handleWebhook = async (req, res) => {
   // Check if the 'Signing Secret' from the Clerk Dashboard was correctly provided
-  const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+  const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
   if (!WEBHOOK_SECRET) {
     throw new Error("You need a WEBHOOK_SECRET in your .env");
   }
