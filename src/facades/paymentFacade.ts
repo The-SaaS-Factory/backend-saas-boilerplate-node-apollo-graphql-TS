@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import {
-  stripeCreateCustomer,
   stripeCreatePlan,
   stripeCreateProduct,
   stripeCreateSuscription,

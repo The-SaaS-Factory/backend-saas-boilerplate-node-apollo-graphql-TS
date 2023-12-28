@@ -59,8 +59,9 @@ export const getUser = async (token: string) => {
 };
 
 export const handleUserCreated = async (userData, source = "webhook") => {
-  let user = null;
-  user = await prisma.user.findFirst({
+  let newUser = null;
+
+   const  user = await prisma.user.findFirst({
     where: {
       externalId: userData.id,
     },
@@ -69,7 +70,7 @@ export const handleUserCreated = async (userData, source = "webhook") => {
   if (!user) {
     //Is possible that user can not be created by clerk, so we need to create it
     if (source === "request") {
-      user = await prisma.user.create({
+      newUser = await prisma.user.create({
         data: {
           externalId: userData.id,
           externalAttributes: JSON.stringify(userData),
@@ -81,7 +82,7 @@ export const handleUserCreated = async (userData, source = "webhook") => {
         },
       });
     } else {
-      user = await prisma.user.create({
+      newUser = await prisma.user.create({
         data: {
           externalId: userData.id,
           externalAttributes: JSON.stringify(userData),
@@ -93,14 +94,14 @@ export const handleUserCreated = async (userData, source = "webhook") => {
       });
     }
 
-    checkMarketingActionsOnRegister("User", user.id);
+    checkMarketingActionsOnRegister("User", newUser.id);
 
-    createDefaultSettingForuser(user);
+    createDefaultSettingForuser(newUser);
 
     //Check if user has organization in clerk and create it
-    syncOrganizationsWithClerk(user);
+    syncOrganizationsWithClerk(newUser);
 
-    return user;
+    return newUser;
   } else {
     return handleUserUpdated(userData, "request");
   }

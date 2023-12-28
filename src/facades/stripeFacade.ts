@@ -58,18 +58,16 @@ export const stripeWebhook = async (requestBody, response) => {
   const event = stripe.webhooks.constructEvent(payloadString, header, secret);
   const eventData = event.data.object as Stripe.PaymentIntent;
 
-  console.log("eventData", event.type);
-
   try {
     switch (event.type) {
       case "invoice.paid":
-        await stripeEventInvoicePaid(eventData);
+        await stripeEventInvoicePaid(eventData); //Second
         break;
       case "payment_intent.payment_failed":
         await stripeEventPaymentFailed(eventData);
         break;
       case "checkout.session.completed":
-        await stripeEventCheckoutCompleted(eventData);
+        await stripeEventCheckoutCompleted(eventData); //First
         break;
 
       default:
@@ -104,8 +102,6 @@ export const stripeEventInvoicePaid = async (eventData: any) => {
     }
 
     const client = await stripeGetClientByCustomerId(eventData.customer); //Can be user or organization
-
-    console.log("invoice paid event,Part 1Client", client);
 
     const userId = client
       ? client.model === "User"
@@ -198,8 +194,6 @@ export const stripeEventCheckoutCompleted = async (eventData) => {
 
     await checkInvoicesWithOutUserId(eventData.invoice, model, parseInt(id));
 
-  
-
     return "ok";
   } catch (error) {
     console.log(error);
@@ -273,17 +267,17 @@ export const stripeCreatePlan = async (
 export const stripeCreateCustomer = async (customerPayload: any) => {
   try {
     const stripe = await makeStripeClient();
-    const paymentMethod = await stripCreatePaymentMethod();
+   // const paymentMethod = await stripCreatePaymentMethod();
 
-    if (!paymentMethod) throw new Error("Error creating payment method");
+   // if (!paymentMethod) throw new Error("Error creating payment method");
 
     return await stripe.customers.create({
       name: customerPayload.name ?? null,
       email: customerPayload.email ?? null,
-      payment_method: customerPayload.paymentMethod.id,
-      invoice_settings: {
-        default_payment_method: customerPayload.paymentMethod.id,
-      },
+     // payment_method: paymentMethod.id,
+      // invoice_settings: {
+      //   default_payment_method: paymentMethod.id,
+      // },
     });
   } catch (error) {
     throw new Error(error.message);
@@ -309,6 +303,10 @@ export const stripeCreateCheckoutSession = async (
   try {
     const domain = await getSuperAdminSetting("PLATFORM_FRONTEND_URL");
     const stripe = await makeStripeClient();
+    const customer = await stripeCreateCustomer({
+      name: payload.name,
+      email: payload.email,
+    });
 
     let sessionPayload: any = {
       line_items: [
@@ -326,8 +324,8 @@ export const stripeCreateCheckoutSession = async (
       cancel_url: `${domain}/home/settings?paymentStatus=error`,
     };
 
-    if (clientPayload.customerId) {
-      sessionPayload.customer = clientPayload.customerId;
+    if (clientPayload.customerId || customer) {
+      sessionPayload.customer = clientPayload.customerId ?? customer.id;
     } else {
       sessionPayload.payment_method_types = ["card"];
       sessionPayload.customer_email = payload.email;
