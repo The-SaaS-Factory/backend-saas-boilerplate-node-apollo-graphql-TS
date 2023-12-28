@@ -267,14 +267,14 @@ export const stripeCreatePlan = async (
 export const stripeCreateCustomer = async (customerPayload: any) => {
   try {
     const stripe = await makeStripeClient();
-   // const paymentMethod = await stripCreatePaymentMethod();
+    // const paymentMethod = await stripCreatePaymentMethod();
 
-   // if (!paymentMethod) throw new Error("Error creating payment method");
+    // if (!paymentMethod) throw new Error("Error creating payment method");
 
     return await stripe.customers.create({
       name: customerPayload.name ?? null,
       email: customerPayload.email ?? null,
-     // payment_method: paymentMethod.id,
+      // payment_method: paymentMethod.id,
       // invoice_settings: {
       //   default_payment_method: paymentMethod.id,
       // },
@@ -303,10 +303,6 @@ export const stripeCreateCheckoutSession = async (
   try {
     const domain = await getSuperAdminSetting("PLATFORM_FRONTEND_URL");
     const stripe = await makeStripeClient();
-    const customer = await stripeCreateCustomer({
-      name: payload.name,
-      email: payload.email,
-    });
 
     let sessionPayload: any = {
       line_items: [
@@ -324,11 +320,11 @@ export const stripeCreateCheckoutSession = async (
       cancel_url: `${domain}/home/settings?paymentStatus=error`,
     };
 
-    if (clientPayload.customerId || customer) {
-      sessionPayload.customer = clientPayload.customerId ?? customer.id;
+    if (!clientPayload.customerId) {
+      const customer = await createCustomerInCheckoputSession(clientPayload);
+      sessionPayload.customer = customer.id;
     } else {
-      sessionPayload.payment_method_types = ["card"];
-      sessionPayload.customer_email = payload.email;
+      sessionPayload.customer = clientPayload.customerId;
     }
 
     const session = await stripe.checkout.sessions.create(sessionPayload);
@@ -337,6 +333,21 @@ export const stripeCreateCheckoutSession = async (
   } catch (error) {
     throw new Error(error.message);
   }
+};
+
+const createCustomerInCheckoputSession = async (customerPayload: any) => {
+  const customer = await stripeCreateCustomer({
+    name: customerPayload.name,
+    email: customerPayload.email,
+  });
+
+  if (!customer) throw new Error("Error creating customer");
+  let model = null;
+  const scope = customerPayload.modelId.split("-")[0];
+  const modelId = customerPayload.modelId.split("-")[1];
+  scope === "U" ? (model = "User") : (model = "Organization");
+  saveStripeCustomerId(model, parseInt(modelId), customer.id);
+  return customer;
 };
 
 export const stripeCreateSuscription = async (
