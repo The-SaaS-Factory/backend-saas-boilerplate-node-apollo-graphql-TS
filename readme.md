@@ -1,27 +1,65 @@
 
+# The SaaS Factory
 
-# The SaaS Factory 
-## _The Boilerplate for SaaS Products, Free and Open Source_
- 
-The SaaS Factory is a boilerplate for avanded SaaS products. It's free and open source, and it's powered by Apollo GraphQL , React, Tailwind CSS, and TypeScript
- ![enter image description here](https://ik.imagekit.io/cluzstudio/01-cluzstudio/Sem%20t%C3%ADtulo-2023-12-19-2206_cO2HqHxMM.png?updatedAt=1703035291143)
+## The standard model for launching free, open source, SaaS products faster
+  
+Our vision is that a programmer with a regular job can, with this boilerplate, launch a side project in a weekend.
+
+### Boilerplate architecture
+![enter image description here](https://ik.imagekit.io/cluzstudio/01-cluzstudio/boilerplate_zpfPgAExv.png?updatedAt=1703706286400)
+
 
 - [Frontend App - Vite - React - Tailwind CSS, Apollo Client, Graphql, TypeScript](https://github.com/The-SaaS-Factory/frontend-saas-boilerplate-react-apollo-graphql-TS) 
 - Backend App - Node - [Apollo Server](https://www.apollographql.com/docs/apollo-server/) - [Graphql](https://graphql.org/) - [Prisma  ](https://www.prisma.io/)  **(This repo)** 
 - Integrations: Stripe, [Imagekit](https://imagekit.io/), [Loops So](https://loops.so/)
 
-## Features
-soon!!
+## Top Features
 
-## installation
+1.  **GraphQL with Apollo :**  The GraphQL-based architecture makes data retrieval efficient, while Apollo Client simplifies application state management, enhancing user experience and reducing server load.
+    
+2.  **TypeScript:**  Leverage the power of TypeScript's static typing system to detect and prevent errors at compile time, providing increased confidence and productivity during development.
+    
+3.  **React:**  Build dynamic and responsive user interfaces with React, the leading JavaScript library for creating reusable and easily maintainable components.
+    
+4.  **Tailwind CSS:**  Streamline the design and styling of your application with Tailwind CSS, a utility-first framework that enables you to quickly customize your application's appearance without sacrificing code readability.
+    
+5.  **Prisma:**  Prisma is one of the best current ORMs to manage databases
+    
+6.  **Clerk:**  Powerful authentication manager allowing you to add social providers and manage organizations, permissions and roles What you avoid doing by using this boilerplate
+    
+7.  **Stripe:**  Stripe is the best payment gateway to manage subscriptions and payments
 
- 1. Download or clone the repop.
- 2. In rootwrite: `npm install`
- 3. Create a MySQL DB in your local environment (Xampp, Wamp, Laragon, etc).
- 4. Rename the .env.example file to .env
- 5. Edit the DATABASE_URL line with the name of your database and the local connection data
- 6. Write in the terminal of your editor or PC: `npx prisma db push`
- 7. Load the test data (admin user, roles, etc.) from the database with: `npx prisma db seed`
- 8. Raise the development server to serve the frontend with: `npm run start`
+## Integrated modules
 
-    ***Start building your saas***
+ - [x] Landing Page 
+ - [x] Responsive 
+ - [x] DarkTheme
+ - [x] Dashboards for Admins and Super Admin
+ - [x] Kpis Module
+ - [x] Notifications Module
+ - [x] Organization Switcher (Clerk)
+ - [x] Organization Profile (Clerk)
+ - [x] User Profile (Clerk)
+ - [x] Ticket Support Module
+ - [x] Settings Module for Super Admins
+ - [x] Marketing Module
+ - [x] Stripe Invoices and memberships Module
+ - [x] Imagekit Integration for Media Storage
+ - [x] Internal components to help you create cruds quickly
+ - [x] User management
+ - [x] Organization management
+ - [x] Subscriptions management
+ - [x]  Subscriptions plans management
+ - [x] Membership plan capabilities support
+
+
+## Road map
+For January:
+ - [ ] Improving TypeScript typing
+ - [ ] Improve core components
+ - [ ] Add translations to Spanish and Portuguese
+
+ ## Screenshots
+ ![enter image description here](https://ik.imagekit.io/cluzstudio/01-cluzstudio/screely-1703716752301_xVVckTVwk.png?updatedAt=1703716824119)![enter image description here](https://ik.imagekit.io/cluzstudio/01-cluzstudio/screely-1703720465815_uSi8i2AMI.png?updatedAt=1703720616191)
+![enter image description here](https://ik.imagekit.io/cluzstudio/01-cluzstudio/screely-1703721109176_NE5QpcmxF.png?updatedAt=1703721147856)
+***Start building your saas FASTER***
