@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { MyContext } from "../types/MyContextInterface";
+import { checkPermission } from "../facades/aclFacade.js";
 
 const prisma = new PrismaClient();
 const typeDefs = `#graphql
@@ -47,6 +48,7 @@ const resolvers = {
       args: any,
       context: MyContext
     ) => {
+      checkPermission(context.user.permissions, "administration:read");
       return await prisma.organizationCapabilities.findMany({
         where: {
           organizationId: args.organizationId,
@@ -54,6 +56,7 @@ const resolvers = {
       });
     },
     getAllOrganizations: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "administration:read");
       return await prisma.organization.findMany({
         include: {
           user: true,

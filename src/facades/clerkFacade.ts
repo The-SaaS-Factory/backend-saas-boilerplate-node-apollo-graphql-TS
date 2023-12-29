@@ -165,3 +165,20 @@ export const handleUpdateDataForOrganization = async ({
   }
  
 };
+
+export const getUserOrganizations = async (userId: number) => {
+  const userClerkId = await getUserClerkId(userId);
+
+  if (!userClerkId) throw new Error("User clerk not found");
+
+  const organizations = await clerkClient.users.getOrganizationMembershipList(
+    {
+      userId: userClerkId.externalId,
+    }
+  );
+
+  console.log(organizations);
+  
+
+ // return await clerkClient.users.getUser(user.externalId);
+};

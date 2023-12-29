@@ -2,21 +2,14 @@ import { PrismaClient } from "@prisma/client";
 import {
   stripeCreatePlan,
   stripeCreateProduct,
-  stripeCreateSuscription,
 } from "./stripeFacade.js";
 import { getAdminSettingValue, getSuperAdminSetting } from "./adminFacade.js";
 import Stripe from "stripe";
-import { SettingType } from "../types/User.js";
 import { InvoiceType } from "../types/paymentsTypes.js";
 import { updateMembership } from "./membershipFacade.js";
 import { notifyAdmin, sendInternalNotificatoin } from "./notificationFacade.js";
 
 const prisma = new PrismaClient();
-export const createPaymentsServicesByDefault = async (serviceName: string) => {
-  if (serviceName === "STRIPE_CLIENT_ENABLED") {
-    createStripeServiceByDefault("STRIPE_PRODUCT_BY_DEFAULT");
-  }
-};
 
 const createStripeServiceByDefault = async (serviceName: string) => {
   const existingSetting = await getSuperAdminSetting(serviceName);
@@ -40,17 +33,10 @@ export const connectStripePlanWithLocalPlan = async (localPlanId: number) => {
     where: { id: localPlanId },
   });
   let stripeProductId: any = null;
-  const stripeProductSaved = await getSuperAdminSetting(
-    "STRIPE_PRODUCT_BY_DEFAULT"
-  );
 
   if (localPlan) {
     try {
-      if (!stripeProductSaved) {
-        stripeProductId = await stripeCreateProduct({ name: "Membership" });
-      } else {
-        stripeProductId = stripeProductSaved;
-      }
+      stripeProductId = await stripeCreateProduct({ name: "Membership" });
 
       let intervalCount = 1;
       let intervaltype: Stripe.PlanCreateParams.Interval = "month";
@@ -253,7 +239,7 @@ export const invoicePaid = async (invoiceId) => {
         };
         updateInvoice(invoice.id, payload);
         invoice.userId &&
-        sendInternalNotificatoin(invoice.userId, "Payment success", "");
+          sendInternalNotificatoin(invoice.userId, "Payment success", "");
         notifyAdmin(
           "payment_success",
           `Payment success for user ${invoice.userId}`

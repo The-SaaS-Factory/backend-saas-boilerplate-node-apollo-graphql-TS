@@ -1,5 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { notifyAdmin } from "../facades/notificationFacade.js";
+import {
+  checkPermission,
+  hasPermission,
+  returnUnauthorized,
+} from "../facades/aclFacade.js";
+import { MyContext } from "../types/MyContextInterface.js";
 const prisma = new PrismaClient();
 
 const typeDefs = `#graphql
@@ -60,7 +66,13 @@ type SupportTicketType {
 
 const resolvers = {
   Query: {
-    getSupportTickets: async (root: any, args: { id: number }) => {
+    getSupportTickets: async (
+      root: any,
+      args: { id: number },
+      context: MyContext
+    ) => {
+      checkPermission(context.user.permissions, "support:read");
+
       return await prisma.supportTicket.findMany({
         orderBy: {
           createdAt: "desc",
@@ -111,8 +123,15 @@ const resolvers = {
           },
         },
       });
-     
-      return ticket;
+
+      if (
+        ticket.userId == MyContext.user.id ||
+        hasPermission(MyContext.user.permissions, "support:read")
+      ) {
+        return ticket;
+      }
+
+      return null;
     },
   },
   Mutation: {
@@ -190,15 +209,17 @@ const resolvers = {
             let status: any = "OPEN"; //#Fix
 
             if (ticket.userId != MyContext.user.id) {
-              //Is Admin
+              
+              if (!hasPermission(MyContext.user.permissions, "support:write")) {
+                returnUnauthorized();
+              }
+
               status = "AWAITING_RESPONSE";
             } else {
               if ((ticket.status as string) == "AWAITING_RESPONSE") {
                 status = "UNDER_REVIEW";
               }
             }
-
-            console.log(status);
 
             await prisma.supportTicket.update({
               where: {
@@ -259,8 +280,7 @@ const resolvers = {
 
             if (
               ticket.userId === MyContext.user.id ||
-              (MyContext.user.UserRole[0] &&
-                MyContext.user.UserRole[0].roleId == 1)
+              hasPermission(MyContext.user.permissions, "support:write")
             ) {
               const user = MyContext.user;
 

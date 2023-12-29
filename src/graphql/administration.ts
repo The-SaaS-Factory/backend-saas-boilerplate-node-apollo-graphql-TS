@@ -1,12 +1,13 @@
-import { createPaymentsServicesByDefault } from "../facades/paymentFacade.js";
+import { checkPermission } from "../facades/aclFacade.js";
+import { associateAclFacade } from "../facades/adminFacade.js";
 import { MyContext } from "../types/MyContextInterface";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 const typeDefs = `#graphql
  type Language {
-    id: ID!
+    id: ID! 
     name: String
     lng: String
 } 
@@ -67,14 +68,12 @@ const typeDefs = `#graphql
     role: Role
 } 
 
-
  type UserPermission {
     id: ID!
     userId: Int
     permissionId: Int
     permission: Permission
 } 
- 
 
   type Kpi {
     id: ID!
@@ -105,7 +104,6 @@ type Query {
     getRoles: [Role],
     getPlans: [Plan],
     getKpis(period: Int): [Kpi],
-    getFrontendComponents(name: String, language: String): [FrontendComponent]
   }
 
 type Mutation {
@@ -140,11 +138,11 @@ type Mutation {
 const resolvers = {
   Query: {
     getSuperAdminSettings: async (root: any, args: {}, context: MyContext) => {
-      const settings = await prisma.superAdminSetting.findMany({});
-
-      return settings;
+      checkPermission(context.user.permissions, "settings:read");
+      return await prisma.superAdminSetting.findMany({});
     },
     getPaymentsSettings: async (root: any, args: {}, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:read");
       const settings = await prisma.superAdminSetting.findMany({
         where: {
           settingName: {
@@ -159,7 +157,6 @@ const resolvers = {
           },
         },
       });
-
       return settings;
     },
     getSocialMediaLinks: async (root: any, args: {}, context: MyContext) => {
@@ -199,44 +196,8 @@ const resolvers = {
 
       return settings;
     },
-    getFrontendComponents: async (root: any, args: any, context: MyContext) => {
-      if (args.name) {
-        const argLanguage = args.language ? args.language : "en";
-        const language = await prisma.language.findFirst({
-          where: {
-            lng: argLanguage,
-          },
-        });
-
-        if (language) {
-          return await prisma.frontendComponent.findMany({
-            where: {
-              name: args.name,
-              languageId: language?.id ?? 0,
-            },
-            include: {
-              Language: true,
-            },
-          });
-        } else {
-          return await prisma.frontendComponent.findMany({
-            where: {
-              name: args.name,
-            },
-            include: {
-              Language: true,
-            },
-          });
-        }
-      } else {
-        return await prisma.frontendComponent.findMany({
-          include: {
-            Language: true,
-          },
-        });
-      }
-    },
     getKpis: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "dashboard:read");
       const period = args.period || 1;
       const kpis = await prisma.adminKpi.findMany({
         where: {
@@ -276,10 +237,12 @@ const resolvers = {
       return plans;
     },
     getPermissions: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:read");
       const permissions = await prisma.permission.findMany({});
       return permissions;
     },
     getRoles: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:read");
       const roles = await prisma.role.findMany({
         include: {
           RolePermission: true,
@@ -289,55 +252,8 @@ const resolvers = {
     },
   },
   Mutation: {
-    createFrontendCoponent: async (
-      root: any,
-      args: any,
-      context: MyContext
-    ) => {
-      try {
-        const component = await prisma.frontendComponent.findFirst({
-          where: {
-            id: args.id ?? 0,
-          },
-        });
-
-        if (component) {
-          if (args.action && args.action === "DELETE") {
-            const component = await prisma.frontendComponent.delete({
-              where: {
-                id: args.id ?? 0,
-              },
-            });
-          } else {
-            await prisma.frontendComponent.update({
-              where: {
-                id: component?.id ?? 0,
-              },
-              data: {
-                name: args.name,
-                data: args.data,
-              },
-            });
-          }
-        } else {
-          const languages = await prisma.language.findMany();
-          const payload = languages.map((lng: any) => {
-            return {
-              name: args.name,
-              data: args.data,
-              languageId: lng.id,
-            };
-          });
-          await prisma.frontendComponent.createMany({
-            data: payload,
-          });
-        }
-        return true;
-      } catch (error) {
-        throw new Error(error.message);
-      }
-    },
     createLanguage: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:write");
       const language = await prisma.language.create({
         data: {
           name: args.name,
@@ -347,6 +263,7 @@ const resolvers = {
       return language;
     },
     deletePlan: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:write");
       try {
         await prisma.plan.delete({
           where: {
@@ -359,6 +276,7 @@ const resolvers = {
       }
     },
     deleteLanguage: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:write");
       try {
         const count = await prisma.language.count();
 
@@ -378,6 +296,7 @@ const resolvers = {
       }
     },
     saveAdminSetting: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:write");
       try {
         await Promise.all(
           args.settings.map(async (setting) => {
@@ -399,17 +318,18 @@ const resolvers = {
                   settingValue: setting.settingValue,
                 },
               });
-
-              createPaymentsServicesByDefault(setting.settingName);
             }
           })
         );
         return true;
       } catch (error) {
-        throw new Error(error.message);
+        return {
+          errors: [error],
+        };
       }
     },
     createRole: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:write");
       const role = await prisma.role.create({
         data: {
           name: args.name,
@@ -418,8 +338,8 @@ const resolvers = {
       });
       return role;
     },
-
     createPermission: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:write");
       const permission = await prisma.permission.create({
         data: {
           name: args.name,
@@ -428,87 +348,10 @@ const resolvers = {
       });
       return permission;
     },
-    associateAcl: async (_, args) => {
+    associateAcl: async (_, args, context: MyContext) => {
+      checkPermission(context.user.permissions, "settings:write");
       try {
-        let model = null;
-
-        if (args.model === "User") {
-          model = await prisma.user.findUnique({
-            where: { id: args.modelId },
-          });
-        }
-
-        if (args.model === "Permission") {
-          model = await prisma.permission.findUnique({
-            where: { id: args.modelId },
-          });
-        }
-
-        if (args.model === "Plan") {
-          model = await prisma.plan.findUnique({
-            where: { id: args.modelId },
-          });
-        }
-
-        if (args.model === "Role") {
-          model = await prisma.role.findUnique({
-            where: { id: args.modelId },
-          });
-        }
-
-        if (!model) {
-          return false;
-        }
-
-        // Realiza las operaciones necesarias para asociar los modelos
-        if (args.model === "User" && args.modelToAssociate === "Role") {
-          const userRole = await prisma.userRole.create({
-            data: {
-              userId: model.id,
-              roleId: args.modelToAssociateId,
-            },
-          });
-        } else if (
-          args.model === "User" &&
-          args.modelToAssociate === "Permission"
-        ) {
-          const userPermission = await prisma.userPermission.create({
-            data: {
-              userId: model.id,
-              permissionId: args.modelToAssociateId,
-            },
-          });
-        } else if (
-          args.model === "Permission" &&
-          args.modelToAssociate === "Role"
-        ) {
-          const rolePermission = await prisma.rolePermission.create({
-            data: {
-              permissionId: model.id,
-              roleId: args.modelToAssociateId,
-            },
-          });
-        } else if (
-          args.model === "Plan" &&
-          args.modelToAssociate === "Permission"
-        ) {
-          const rolePermission = await prisma.planPermission.create({
-            data: {
-              planId: model.id,
-              permissionId: args.modelToAssociateId,
-            },
-          });
-        } else if (
-          args.model === "Role" &&
-          args.modelToAssociate === "Permission"
-        ) {
-          const rolePermission = await prisma.rolePermission.create({
-            data: {
-              roleId: model.id,
-              permissionId: args.modelToAssociateId,
-            },
-          });
-        }
+        await associateAclFacade(args);
 
         return true;
       } catch (error) {

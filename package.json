@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only ./src/index.ts",
     "start": "tsc && nodemon ./src/index.ts",
-    "build": "prisma generate && tsc"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "build": "prisma generate && tsc",
+    "admin": "node ./src/scripts/addAdmin.js"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

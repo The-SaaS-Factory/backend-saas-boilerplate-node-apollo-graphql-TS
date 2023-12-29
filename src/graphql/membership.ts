@@ -10,6 +10,7 @@ import {
   updateMembership,
 } from "../facades/membershipFacade.js";
 import { connectStripePlanWithLocalPlan } from "../facades/paymentFacade.js";
+import { checkPermission } from "../facades/aclFacade.js";
 
 const typeDefs = `#graphql
 
@@ -131,6 +132,7 @@ const resolvers = {
       return await prisma.capabilitie.findMany();
     },
     getAllSubscriptions: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "billing:read");
       try {
         const memberships = await prisma.membership.findMany({
           include: {
@@ -167,7 +169,7 @@ const resolvers = {
         return memberships;
       } catch (error) {
         console.log(error);
-        
+
         throw new Error(error.message);
       }
     },
@@ -178,6 +180,7 @@ const resolvers = {
       args: any,
       context: MyContext
     ) => {
+      checkPermission(context.user.permissions, "billing:write");
       return await connectStripePlanWithLocalPlan(args.planId);
     },
     disconectStripePlanWithLocalPlan: async (
@@ -185,6 +188,7 @@ const resolvers = {
       args: any,
       context: MyContext
     ) => {
+      checkPermission(context.user.permissions, "billing:write");
       await prisma.planSetting.deleteMany({
         where: {
           planId: args.planId,
@@ -199,6 +203,7 @@ const resolvers = {
       context: MyContext
     ) => {
       try {
+        checkPermission(context.user.permissions, "billing:write");
         const oldConection = await prisma.planCapabilities.findFirst({
           where: {
             capabilitieId: args.capabilitieId,
@@ -231,6 +236,7 @@ const resolvers = {
     },
     createCapabilitie: async (root: any, args: any, context: MyContext) => {
       try {
+        checkPermission(context.user.permissions, "billing:write");
         return await prisma.capabilitie.create({
           data: {
             name: args.name,
@@ -243,6 +249,7 @@ const resolvers = {
       }
     },
     deleteCapabilitie: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "billing:write");
       try {
         await prisma.capabilitie.delete({
           where: {
@@ -256,27 +263,32 @@ const resolvers = {
       }
     },
     createPlan: async (root: any, args: any, context: MyContext) => {
-      await prisma.plan.upsert({
-        where: {
-          id: args.planId ? args.planId : 0,
-        },
-        update: {
-          name: args.name,
-          type: args.type,
-          price: args.price,
-          description: args.description,
-          oldPrice: args.oldPrice,
-          status: args.status,
-        },
-        create: {
-          name: args.name,
-          type: args.type,
-          price: args.price,
-          description: args.description,
-          oldPrice: args.oldPrice,
-          status: args.status,
-        },
-      });
+      checkPermission(context.user.permissions, "billing:write");
+      try {
+        await prisma.plan.upsert({
+          where: {
+            id: args.planId ? args.planId : 0,
+          },
+          update: {
+            name: args.name,
+            type: args.type,
+            price: args.price,
+            description: args.description,
+            oldPrice: args.oldPrice,
+            status: args.status,
+          },
+          create: {
+            name: args.name,
+            type: args.type,
+            price: args.price,
+            description: args.description,
+            oldPrice: args.oldPrice,
+            status: args.status,
+          },
+        });
+      } catch (error) {
+        throw new Error(error.message);
+      }
     },
   },
 };

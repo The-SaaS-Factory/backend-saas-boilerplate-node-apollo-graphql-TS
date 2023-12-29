@@ -3,11 +3,9 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { withFilter } from "graphql-subscriptions";
 import { MyContext } from "../types/MyContextInterface";
 import pubsub from "../facades/pubSubFacade.js";
-import {
-  checkSettingAction,
-} from "../facades/userFacade.js";
- 
- 
+import { checkSettingAction } from "../facades/userFacade.js";
+import { checkPermission } from "../facades/aclFacade.js";
+
 const prisma = new PrismaClient();
 
 const typeDefs = `#graphql
@@ -17,10 +15,10 @@ type Avatar {
     url: String
   }
 
-        input UserLoginInput {
-        email: String!
-        password: String!
-        }
+    input UserLoginInput {
+    email: String!
+    password: String!
+    }
 
     input UserCreateInput {
         username: String!
@@ -261,7 +259,8 @@ const resolvers = {
 
       return user;
     },
-    getUsers: async (root: any, args: any) => {
+    getUsers: async (root: any, args: any, context: MyContext) => {
+      checkPermission(context.user.permissions, "administration:read");
       let whereSearch: Prisma.UserWhereInput;
       const limit = args.limit;
       const offset = args.offset;
@@ -274,9 +273,6 @@ const resolvers = {
           },
         };
       }
-
-      console.log(args.search);
-
       const users = await prisma.user.findMany({
         where: {
           ...whereSearch,

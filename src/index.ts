@@ -23,6 +23,7 @@ import pkg from "body-parser";
 const { json } = pkg;
 import { LooseAuthProp } from "@clerk/clerk-sdk-node";
 import { handleWebhook } from "./facades/clerkFacade.js";
+import { GraphQLError } from "graphql";
 
 //Settings
 declare global {
@@ -115,9 +116,9 @@ const authMiddleware = async (req, res, next) => {
   if (userCache[token] && currentTime - userCache[token].timestamp < 77777777) {
     user = userCache[token].user;
   } else {
-    // Si no se encuentra en la caché o ha expirado, busca en la BD
+    //  Get the user from BD or Clerk
     user = await getUser(token);
-    // Almacena el resultado en la caché para futuras solicitudes
+    // Store in cache 
     userCache[token] = { user, timestamp: currentTime };
   }
 
@@ -134,9 +135,15 @@ app.use(
   expressMiddleware(server, {
     context: async ({ req }: { req: any }) => {
       const user = req.user;
-
+      
+      
       if (!user) {
-        throw new Error("User not found");
+        throw new GraphQLError("User is not authenticated", {
+          extensions: {
+            code: "UNAUTHENTICATED",
+            http: { status: 401 },
+          },
+        });
       }
 
       // Get the user's IP address from the request object

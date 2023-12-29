@@ -7,6 +7,7 @@ import {
 import jwt from "jsonwebtoken";
 import clerkClient from "@clerk/clerk-sdk-node";
 import { syncOrganizationsWithClerk } from "./organizationFacade.js";
+import { syncUserPermissions } from "./aclFacade.js";
 
 const prisma = new PrismaClient();
 
@@ -31,26 +32,51 @@ export const getUser = async (token: string) => {
     const decodedToken: any = jwt.decode(token);
     const userId = decodedToken?.sub;
 
+    
+
     //Get user from BD
     const user = await prisma.user.findFirst({
       where: {
         externalId: userId,
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
+      include: {
+        UserPermission: {
+          select: {
+            permission: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
     if (!user) {
       const userClerk = await clerkClient.users.getUser(userId);
 
-      if (userClerk) {
-        return await handleUserCreated(userClerk, "request");
+      if (!userClerk) {
+        return null;
       }
+
+      return await handleUserCreated(userClerk, "request");
     } else {
-      return user;
+
+      const organizationActive = await clerkClient.users.getOrganizationMembershipList({
+        userId: user.externalId,
+      });
+
+      console.log('organizationActive',organizationActive);
+      
+
+      const userOptimized = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        permissions: user.UserPermission.map((item) => item.permission.name),
+      };
+
+      return userOptimized;
     }
   } catch (error) {
     console.log(error);
@@ -61,7 +87,7 @@ export const getUser = async (token: string) => {
 export const handleUserCreated = async (userData, source = "webhook") => {
   let newUser = null;
 
-   const  user = await prisma.user.findFirst({
+  const user = await prisma.user.findFirst({
     where: {
       externalId: userData.id,
     },
@@ -81,7 +107,7 @@ export const handleUserCreated = async (userData, source = "webhook") => {
           avatar: userData.imageUrl,
         },
       });
-    } else {
+    } else if (source === "webhook") {
       newUser = await prisma.user.create({
         data: {
           externalId: userData.id,
@@ -108,6 +134,8 @@ export const handleUserCreated = async (userData, source = "webhook") => {
 };
 
 export const handleUserUpdated = async (userData, source = "webhook") => {
+   
+
   const user = await prisma.user.findFirst({
     where: {
       externalId: userData.id,
@@ -135,6 +163,15 @@ export const handleUserUpdated = async (userData, source = "webhook") => {
         name: userData.fullName || userData.first_name,
         avatar: userData.profile_image_url,
       };
+
+      
+      console.log(userData.public_metadata.permissions);
+      
+      //Sync permissions by publicMetadata permisisons
+      syncUserPermissions(
+        userData.public_metadata.permissions,
+        user.id
+      );
     }
 
     return await prisma.user.update({
