@@ -35,12 +35,10 @@ model User {
   resume               String?                @db.VarChar(512)
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
-  Language             Language               @relation(fields: [languageId], references: [id])
   languageId           Int                    @default(1)
+  Language             Language               @relation(fields: [languageId], references: [id])
   amounts              UserAmounts[]
   UserSetting          UserSetting[]
-  UserRole             UserRole[]
-  UserPermission       UserPermission[]
   refer                Referral[]             @relation("refer")
   referredBy           Referral[]             @relation("referred")
   Notification         Notification[]
@@ -53,6 +51,7 @@ model User {
   SupportTicketMessage SupportTicketMessage[]
   Organization         Organization[]
   StripeCustomer       StripeCustomer[]
+  Permission           Permission[]
 
   @@index([typeId, languageId])
 }
@@ -70,6 +69,8 @@ model Organization {
   Invoice                  Invoice[]
   Membership               Membership?
   OrganizationCapabilities OrganizationCapabilities[]
+  Permission               Permission[]
+  Module                   Module[]
 
   @@index([userId])
 }
@@ -143,16 +144,6 @@ model Membership {
   @@index([userId, organizationId])
 }
 
-model PlanPermission {
-  id           Int        @id @default(autoincrement())
-  planId       Int
-  permissionId Int
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  Plan         Plan       @relation(fields: [planId], references: [id])
-
-  @@index([planId, permissionId])
-}
-
 model Plan {
   id               Int                @id @default(autoincrement())
   name             String
@@ -162,10 +153,35 @@ model Plan {
   price            Float
   oldPrice         Float?
   Membership       Membership[]
-  Permission       PlanPermission[]
   settings         PlanSetting[]
   PlanCapabilities PlanCapabilities[]
+  Permission       Permission[]
 }
+
+//*************************** ACL ***************************// 
+model Module {
+  id           Int            @id @default(autoincrement())
+  name         String
+  scope        ScopeType      @default(SUPERADMIN)
+  status       Status         @default(ACTIVE)
+  description  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Permission   Permission[]
+  Organization Organization[]
+}
+
+model Permission {
+  id             Int            @id @default(autoincrement())
+  name           String
+  description    String?
+  UserPermission User[]
+  Module         Module[]
+  Plan           Plan[]
+  Organization   Organization[]
+}
+
+//*************************** END ACL ***************************//
 
 model AdminKpi {
   id        Int      @id @default(autoincrement())
@@ -184,45 +200,6 @@ model Referral {
   referredId Int
 
   @@index([referId, referredId])
-}
-
-model Role {
-  id             Int              @id @default(autoincrement())
-  name           String
-  description    String?
-  permissions    Permission[]     @relation("RolePermission")
-  UserRole       UserRole[]
-  RolePermission RolePermission[]
-}
-
-model UserRole {
-  id     Int  @id @default(autoincrement())
-  userId Int
-  user   User @relation(fields: [userId], references: [id])
-  roleId Int
-  role   Role @relation(fields: [roleId], references: [id])
-
-  @@index([userId, roleId])
-}
-
-model UserPermission {
-  id           Int        @id @default(autoincrement())
-  userId       Int
-  user         User       @relation(fields: [userId], references: [id])
-  permissionId Int
-  permission   Permission @relation(fields: [permissionId], references: [id])
-
-  @@index([userId, permissionId])
-}
-
-model Permission {
-  id             Int              @id @default(autoincrement())
-  name           String
-  description    String?
-  roles          Role[]           @relation("RolePermission")
-  UserPermission UserPermission[]
-  RolePermission RolePermission[]
-  PlanPermission PlanPermission[]
 }
 
 model Capabilitie {
@@ -263,20 +240,10 @@ model OrganizationCapabilities {
   capabilitieId  Int
   organizationId Int
   count          Int
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   capabilitie    Capabilitie  @relation(fields: [capabilitieId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, capabilitieId])
-}
-
-model RolePermission {
-  id           Int        @id @default(autoincrement())
-  role         Role       @relation(fields: [roleId], references: [id])
-  roleId       Int
-  permission   Permission @relation(fields: [permissionId], references: [id])
-  permissionId Int
-
-  @@unique([roleId, permissionId])
 }
 
 model UserSetting {
@@ -291,7 +258,7 @@ model UserSetting {
 
 model OrganizationSetting {
   id             Int          @id @default(autoincrement())
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId Int
   settingName    String       @db.VarChar(128)
   settingValue   String       @db.Text
@@ -532,4 +499,11 @@ enum Status {
   PENDING
   COMPLETED
   DRAFT
+}
+
+enum ScopeType {
+  USER
+  CLIENT
+  ADMIN
+  SUPERADMIN
 }

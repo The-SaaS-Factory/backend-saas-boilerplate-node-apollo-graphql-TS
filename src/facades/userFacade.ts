@@ -4,10 +4,10 @@ import {
   checkMarketingActionsOnRegister,
   sendWelcomeEmail,
 } from "./marketingFacade.js";
-import jwt from "jsonwebtoken";
+
 import clerkClient from "@clerk/clerk-sdk-node";
 import { syncOrganizationsWithClerk } from "./organizationFacade.js";
-import { syncUserPermissions } from "./aclFacade.js";
+import { syncUserPermissions } from "./scurityFacade.js";
 
 const prisma = new PrismaClient();
 
@@ -27,12 +27,11 @@ export async function createDefaultSettingForuser(user: User) {
   checkSettingAction(newPlatformNotification);
 }
 
-export const getUser = async (token: string) => {
+export const getUser = async (decodedToken: any) => {
   try {
-    const decodedToken: any = jwt.decode(token);
+    let organization = null;
     const userId = decodedToken?.sub;
-
-    
+    const orgId = decodedToken?.org_id;
 
     //Get user from BD
     const user = await prisma.user.findFirst({
@@ -40,17 +39,29 @@ export const getUser = async (token: string) => {
         externalId: userId,
       },
       include: {
-        UserPermission: {
+        Permission: {
           select: {
-            permission: {
-              select: {
-                name: true,
-              },
-            },
+            name: true,
           },
         },
       },
     });
+
+    if (orgId) {
+      organization = await prisma.organization.findFirst({
+        where: {
+          externalId: orgId,
+        },
+        include: {
+          Permission: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+    }
 
     if (!user) {
       const userClerk = await clerkClient.users.getUser(userId);
@@ -61,19 +72,18 @@ export const getUser = async (token: string) => {
 
       return await handleUserCreated(userClerk, "request");
     } else {
+      const organizationPermissions = organization?.Permission.map(
+        (item) => item.name
+      );
+      const userPermissions = user.Permission.map((item) => item.name);
 
-      const organizationActive = await clerkClient.users.getOrganizationMembershipList({
-        userId: user.externalId,
-      });
-
-      console.log('organizationActive',organizationActive);
-      
-
+      const allPermissions = userPermissions.concat(organizationPermissions);
+        
       const userOptimized = {
         id: user.id,
         name: user.name,
         email: user.email,
-        permissions: user.UserPermission.map((item) => item.permission.name),
+        permissions: allPermissions,
       };
 
       return userOptimized;
@@ -134,8 +144,6 @@ export const handleUserCreated = async (userData, source = "webhook") => {
 };
 
 export const handleUserUpdated = async (userData, source = "webhook") => {
-   
-
   const user = await prisma.user.findFirst({
     where: {
       externalId: userData.id,
@@ -164,13 +172,11 @@ export const handleUserUpdated = async (userData, source = "webhook") => {
         avatar: userData.profile_image_url,
       };
 
-      
-      console.log(userData.public_metadata.permissions);
-      
       //Sync permissions by publicMetadata permisisons
       syncUserPermissions(
+        user.id,
         userData.public_metadata.permissions,
-        user.id
+        prisma
       );
     }
 

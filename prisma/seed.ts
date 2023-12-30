@@ -1,10 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import { rols } from "./seeds/rols.js";
 import { languages } from "./seeds/languages.js";
 import { capabilities, planCapabilities, plans } from "./seeds/plans.js";
 import { settings } from "./seeds/platform.js";
 import { currencies } from "./seeds/currenciess.js";
 import { permissions } from "./seeds/permissions.js";
+import { modules } from "./seeds/modules.js";
 const prisma = new PrismaClient();
 
 async function main() {
@@ -12,12 +12,9 @@ async function main() {
     await tx.permission.createMany({
       data: permissions,
     });
-    await tx.role.createMany({
-      data: rols,
+    await tx.module.createMany({
+      data: modules,
     });
-
-    const firstRole = await tx.role.findFirst();
-    if (firstRole) await connectPermissionsWithRols(tx, firstRole.id as number);
 
     await tx.adminCurrencies.createMany({
       data: currencies,
@@ -50,15 +47,4 @@ main()
     await prisma.$disconnect();
   });
 
-export const connectPermissionsWithRols = async (tx: any, roleId: number) => {
-  const permissions = await tx.permission.findMany();
-
-  for (const permission of permissions) {
-    await prisma.rolePermission.create({
-      data: {
-        roleId: roleId,
-        permissionId: permission.id,
-      },
-    });
-  }
-};
+ 

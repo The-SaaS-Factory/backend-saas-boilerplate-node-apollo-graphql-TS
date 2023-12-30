@@ -1,35 +1,39 @@
 
 export const permissions = [
     {
-      name: "administration:read",
+      name: "superAdmin:totalAccess",
       description: "Top Permission",
     },
     {
-      name: "support:read",
+      name: "superAdmin:administration:read",
       description: "",
     },
     {
-      name: "support:write",
+      name: "superAdmin:support:read",
       description: "",
     },
     {
-      name: "settings:read",
+      name: "superAdmin:support:write",
       description: "",
     },
     {
-      name: "settings:write",
+      name: "superAdmin:settings:read",
       description: "",
     },
     {
-      name: "dashboard:read",
+      name: "superAdmin:settings:write",
+      description: "",
+    },
+    {
+      name: "superAdmin:dashboard:read",
       description: "Kpis",
     },
     {
-      name: "billing:read",
+      name: "superAdmin:billing:read",
       description: "Read Invoices, Plans, Subscriptions",
     },
     {
-      name: "billing:write",
+      name: "superAdmin:billing:write",
       description: "Write Invoices, Plans, Subscriptions",
     }
   ];

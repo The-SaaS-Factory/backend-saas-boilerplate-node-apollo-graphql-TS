@@ -5,6 +5,7 @@ import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import express from "express";
 import http from "http";
+import jwt from "jsonwebtoken";
 import cors from "cors";
 import bodyParser from "body-parser";
 import { resolvers } from "./graphql/shema.js";
@@ -105,25 +106,32 @@ await server.start();
 const userCache = {};
 
 const authMiddleware = async (req, res, next) => {
-  const BearerToken = req.headers.authorization || "";
-  const token = BearerToken.replace("Bearer ", "");
+  try {
+    const BearerToken = req.headers.authorization || "";
+    const token = BearerToken.replace("Bearer ", "");
+    const decodedToken: any = jwt.decode(token);
+    const userId = decodedToken.sub;
 
-  let user: any = null;
+    let user: any = null;
 
-  const currentTime = Date.now();
+    if (userCache[userId]) {
+      console.log("user from cache")
+      user = userCache[userId].user;
+    } else {
+      user = await getUser(decodedToken);
+      userCache[userId] = { user };
+      console.log("user from db");
 
-  // Try to find the user in the cache
-  if (userCache[token] && currentTime - userCache[token].timestamp < 77777777) {
-    user = userCache[token].user;
-  } else {
-    //  Get the user from BD or Clerk
-    user = await getUser(token);
-    // Store in cache 
-    userCache[token] = { user, timestamp: currentTime };
+    }
+
+    req.user = user;
+
+    next();
+  } catch (error) {
+    console.error("Error on authMiddleware", error);
+    req.user = null;
+    next();
   }
-
-  req.user = user;
-  next();
 };
 
 app.use(authMiddleware);
@@ -135,8 +143,6 @@ app.use(
   expressMiddleware(server, {
     context: async ({ req }: { req: any }) => {
       const user = req.user;
-      
-      
       if (!user) {
         throw new GraphQLError("User is not authenticated", {
           extensions: {
@@ -145,6 +151,9 @@ app.use(
           },
         });
       }
+
+      console.log("user", user);
+      
 
       // Get the user's IP address from the request object
       const ipAddress = req.ip || req.socket.remoteAddress || "";

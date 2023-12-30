@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { checkMarketingActionsOnRegister } from "./marketingFacade.js";
 import clerkClient from "@clerk/clerk-sdk-node";
+import { syncOrganizationPermissions } from "./scurityFacade.js";
 
 const prisma = new PrismaClient();
 
@@ -39,7 +40,8 @@ export const handleOrganizationUpdated = async (organizationData) => {
   });
 
   if (organization) {
-    return await prisma.organization.update({
+
+     const organizationUpdated = await prisma.organization.update({
       where: {
         id: organization.id,
       },
@@ -48,6 +50,10 @@ export const handleOrganizationUpdated = async (organizationData) => {
         name: organizationData.name,
       },
     });
+
+     syncOrganizationPermissions(organization.id, organizationData.public_metadata.permissions, prisma);
+
+    return organizationUpdated;
   } else {
     return handleCreateOrganization(organizationData);
   }

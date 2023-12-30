@@ -64,7 +64,7 @@ export const handleWebhook = async (req, res) => {
 const handleEventWebhook = async (evt: WebhookEvent) => {
   switch (evt.type) {
     case "user.created":
-      await handleUserCreated(evt.data,'webhook');
+      await handleUserCreated(evt.data, "webhook");
       break;
     case "user.updated":
       await handleUserUpdated(evt.data, "webhook");
@@ -147,23 +147,32 @@ export const handleUpdateDataForOrganization = async ({
   organizationBdId: number;
   data: any;
 }) => {
-  const organizationId = (await getOrganizationClerkById(organizationBdId))
-    .externalId;
+  try {
+    const organization = await getOrganizationClerkById(organizationBdId);
 
-  if (!organizationId) throw new Error("User not found");
+    if (!organization) throw new Error("Organization not found");
 
-  if (scope === "publicMetadata") {
-    await clerkClient.organizations.updateOrganizationMetadata(organizationId, {
-      publicMetadata: data,
-    });
+    if (scope === "publicMetadata" && organization.externalId) {
+
+      await clerkClient.organizations.updateOrganizationMetadata(
+        organization.externalId,
+        {
+          publicMetadata: data,
+        }
+      );
+    }
+
+    if (scope === "privateMetadata" && organization.externalId) {
+      await clerkClient.organizations.updateOrganizationMetadata(
+        organization.externalId,
+        {
+          privateMetadata: data,
+        }
+      );
+    }
+  } catch (error) {
+    console.log(error);
   }
-
-  if (scope === "privateMetadata") {
-    await clerkClient.organizations.updateOrganizationMetadata(organizationId, {
-      privateMetadata: data,
-    });
-  }
- 
 };
 
 export const getUserOrganizations = async (userId: number) => {
@@ -171,14 +180,9 @@ export const getUserOrganizations = async (userId: number) => {
 
   if (!userClerkId) throw new Error("User clerk not found");
 
-  const organizations = await clerkClient.users.getOrganizationMembershipList(
-    {
-      userId: userClerkId.externalId,
-    }
-  );
+  const organizations = await clerkClient.users.getOrganizationMembershipList({
+    userId: userClerkId.externalId,
+  });
 
-  console.log(organizations);
-  
-
- // return await clerkClient.users.getUser(user.externalId);
+  // return await clerkClient.users.getUser(user.externalId);
 };

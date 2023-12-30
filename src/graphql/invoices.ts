@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 import { MyContext } from "../types/MyContextInterface";
-import { checkPermission } from "../facades/aclFacade.js";
+import { checkPermission } from "../facades/scurityFacade.js";
 
 const typeDefs = `#graphql
 
@@ -32,7 +32,7 @@ type InvoiceType {
 const resolvers = {
   Query: {
     getAllInvoices: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "billing:read");
+      checkPermission(context.user.permissions, "superAdmin:billing:read");
       return await prisma.invoice.findMany({
         include: {
           user: true,

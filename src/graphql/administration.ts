@@ -1,5 +1,4 @@
-import { checkPermission } from "../facades/aclFacade.js";
-import { associateAclFacade } from "../facades/adminFacade.js";
+import { checkPermission } from "../facades/scurityFacade.js";
 import { MyContext } from "../types/MyContextInterface";
 import { PrismaClient } from "@prisma/client";
 
@@ -12,11 +11,7 @@ const typeDefs = `#graphql
     lng: String
 } 
 
- type Permission {
-    id: ID!
-    name: String
-    description: String
-} 
+ 
  type Plan {
     id: ID!
     name: String
@@ -27,52 +22,26 @@ const typeDefs = `#graphql
     status: String
     Permission: [PlanPermission]
 } 
- type Role {
-    id: ID!
-    name: String
-    description: String
-    RolePermission: [RolePermission]
-} 
  
- type RolePermission {
+ 
+ type PlanPermission {
     id: ID!
-    roleId: Int
+    planId: Int
     permissionId: Int
+    permission: PermissionType
 } 
  type PlanPermission {
     id: ID!
     planId: Int
     permissionId: Int
-    permission: Permission
-} 
- type PlanPermission {
-    id: ID!
-    planId: Int
-    permissionId: Int
-    permission: Permission
-} 
- 
- type FrontendComponent {
-    id: ID!
-    name: String
-    type: String
-    data: String
-    description: String
-    Language: Language
-} 
- 
- type UserRole {
-    id: ID!
-    userId: Int
-    roleId: Int
-    role: Role
+    permission: PermissionType
 } 
 
  type UserPermission {
     id: ID!
     userId: Int
     permissionId: Int
-    permission: Permission
+    permission: PermissionType
 } 
 
   type Kpi {
@@ -93,15 +62,12 @@ const typeDefs = `#graphql
     settingValue: String
     }
 
-
 type Query {
     getSuperAdminSettings: [SuperAdminSettingType],
     getPaymentsSettings: [SuperAdminSettingType],
     getSocialMediaLinks: [SuperAdminSettingType],
     getPlatformGeneralData: [SuperAdminSettingType],
     getLanguages: [Language],
-    getPermissions: [Permission],
-    getRoles: [Role],
     getPlans: [Plan],
     getKpis(period: Int): [Kpi],
   }
@@ -115,34 +81,19 @@ type Mutation {
     saveAdminSetting(
       settings: [SuperAdminSetting],
     ): Boolean,
-  
     deletePlan(planId: Int): Boolean
     deleteLanguage(languageId: Int!): Boolean
-    createRole(
-      name: String,
-      description: String
-    ): Role,
-    createPermission(
-      name: String,
-      description: String
-    ): Permission,
-    associateAcl(
-      model: String
-      modelId: Int
-      modelToAssociate: String
-      modelToAssociateId: Int
-    ): Boolean
     }
 `;
 
 const resolvers = {
   Query: {
     getSuperAdminSettings: async (root: any, args: {}, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:read");
+      checkPermission(context.user.permissions, "superAdmin:settings:read");
       return await prisma.superAdminSetting.findMany({});
     },
     getPaymentsSettings: async (root: any, args: {}, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:read");
+      checkPermission(context.user.permissions, "superAdmin:settings:read");
       const settings = await prisma.superAdminSetting.findMany({
         where: {
           settingName: {
@@ -197,7 +148,7 @@ const resolvers = {
       return settings;
     },
     getKpis: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "dashboard:read");
+      checkPermission(context.user.permissions, "superAdmin:dashboard:read");
       const period = args.period || 1;
       const kpis = await prisma.adminKpi.findMany({
         where: {
@@ -227,33 +178,15 @@ const resolvers = {
     getPlans: async (root: any, args: any, context: MyContext) => {
       const plans = await prisma.plan.findMany({
         include: {
-          Permission: {
-            include: {
-              permission: true,
-            },
-          },
+          Permission: true,
         },
       });
       return plans;
     },
-    getPermissions: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:read");
-      const permissions = await prisma.permission.findMany({});
-      return permissions;
-    },
-    getRoles: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:read");
-      const roles = await prisma.role.findMany({
-        include: {
-          RolePermission: true,
-        },
-      });
-      return roles;
-    },
   },
   Mutation: {
     createLanguage: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:write");
+      checkPermission(context.user.permissions, "superAdmin:settings:write");
       const language = await prisma.language.create({
         data: {
           name: args.name,
@@ -263,7 +196,7 @@ const resolvers = {
       return language;
     },
     deletePlan: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:write");
+      checkPermission(context.user.permissions, "superAdmin:settings:write");
       try {
         await prisma.plan.delete({
           where: {
@@ -276,7 +209,7 @@ const resolvers = {
       }
     },
     deleteLanguage: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:write");
+      checkPermission(context.user.permissions, "superAdmin:settings:write");
       try {
         const count = await prisma.language.count();
 
@@ -296,7 +229,7 @@ const resolvers = {
       }
     },
     saveAdminSetting: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:write");
+      checkPermission(context.user.permissions, "superAdmin:settings:write");
       try {
         await Promise.all(
           args.settings.map(async (setting) => {
@@ -326,38 +259,6 @@ const resolvers = {
         return {
           errors: [error],
         };
-      }
-    },
-    createRole: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:write");
-      const role = await prisma.role.create({
-        data: {
-          name: args.name,
-          description: args.description,
-        },
-      });
-      return role;
-    },
-    createPermission: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:write");
-      const permission = await prisma.permission.create({
-        data: {
-          name: args.name,
-          description: args.description,
-        },
-      });
-      return permission;
-    },
-    associateAcl: async (_, args, context: MyContext) => {
-      checkPermission(context.user.permissions, "settings:write");
-      try {
-        await associateAclFacade(args);
-
-        return true;
-      } catch (error) {
-        console.log(error.message);
-
-        throw new Error(error.message);
       }
     },
   },
