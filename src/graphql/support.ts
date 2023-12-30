@@ -4,7 +4,7 @@ import {
   checkPermission,
   hasPermission,
   returnUnauthorized,
-} from "../facades/aclFacade.js";
+} from "../facades/scurityFacade.js";
 import { MyContext } from "../types/MyContextInterface.js";
 const prisma = new PrismaClient();
 
@@ -71,7 +71,7 @@ const resolvers = {
       args: { id: number },
       context: MyContext
     ) => {
-      checkPermission(context.user.permissions, "support:read");
+      checkPermission(context.user.permissions, "superAdmin:support:read");
 
       return await prisma.supportTicket.findMany({
         orderBy: {
@@ -126,7 +126,7 @@ const resolvers = {
 
       if (
         ticket.userId == MyContext.user.id ||
-        hasPermission(MyContext.user.permissions, "support:read")
+        hasPermission(MyContext.user.permissions, "superAdmin:support:read")
       ) {
         return ticket;
       }
@@ -210,7 +210,7 @@ const resolvers = {
 
             if (ticket.userId != MyContext.user.id) {
               
-              if (!hasPermission(MyContext.user.permissions, "support:write")) {
+              if (!hasPermission(MyContext.user.permissions, "superAdmin:support:write")) {
                 returnUnauthorized();
               }
 
@@ -280,7 +280,7 @@ const resolvers = {
 
             if (
               ticket.userId === MyContext.user.id ||
-              hasPermission(MyContext.user.permissions, "support:write")
+              hasPermission(MyContext.user.permissions, "superAdmin:support:write")
             ) {
               const user = MyContext.user;
 

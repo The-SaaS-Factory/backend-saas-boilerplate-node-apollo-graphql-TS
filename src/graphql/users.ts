@@ -4,7 +4,7 @@ import { withFilter } from "graphql-subscriptions";
 import { MyContext } from "../types/MyContextInterface";
 import pubsub from "../facades/pubSubFacade.js";
 import { checkSettingAction } from "../facades/userFacade.js";
-import { checkPermission } from "../facades/aclFacade.js";
+import { checkPermission } from "../facades/scurityFacade.js";
 
 const prisma = new PrismaClient();
 
@@ -79,7 +79,6 @@ type Avatar {
       Language: Language,
       UserStatus: [UserStatus]
       Membership: [Membership],
-      UserRole: [UserRole]
       UserPermission: [UserPermission]
       UserCapabilities: [UserCapabilitieType]
   }
@@ -260,7 +259,7 @@ const resolvers = {
       return user;
     },
     getUsers: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "administration:read");
+      checkPermission(context.user.permissions, "superAdmin:administration:read");
       let whereSearch: Prisma.UserWhereInput;
       const limit = args.limit;
       const offset = args.offset;

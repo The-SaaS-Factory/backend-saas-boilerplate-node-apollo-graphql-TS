@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { MyContext } from "../types/MyContextInterface";
-import { checkPermission } from "../facades/aclFacade.js";
+import { checkPermission } from "../facades/scurityFacade.js";
 
 const prisma = new PrismaClient();
 const typeDefs = `#graphql
@@ -16,6 +16,7 @@ const typeDefs = `#graphql
         OrganizationSetting: [OrganizationSettingType]
         Invoice: [InvoiceType]
         Membership: Membership
+        Permission: [PermissionType]
         OrganizationCapabilities: [OrganizationCapabilitiesType]
     }
 
@@ -37,6 +38,7 @@ const typeDefs = `#graphql
 
     extend type Query {
         getAllOrganizations: [OrganizationType]
+        getAllOrganizationsWithPermissions: [OrganizationType]
         getOrganizationCapabilies(organizationId: Int): [OrganizationCapabilitiesType]
     }
 `;
@@ -48,7 +50,7 @@ const resolvers = {
       args: any,
       context: MyContext
     ) => {
-      checkPermission(context.user.permissions, "administration:read");
+      checkPermission(context.user.permissions, "superAdmin:administration:read");
       return await prisma.organizationCapabilities.findMany({
         where: {
           organizationId: args.organizationId,
@@ -56,7 +58,7 @@ const resolvers = {
       });
     },
     getAllOrganizations: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "administration:read");
+       checkPermission(context.user.permissions, "superAdmin:administration:read");  
       return await prisma.organization.findMany({
         include: {
           user: true,
@@ -65,6 +67,30 @@ const resolvers = {
               plan: true,
             },
           },
+          Permission: true,
+        },
+      });
+    },
+    getAllOrganizationsWithPermissions: async (
+      root: any,
+      args: any,
+      context: MyContext
+    ) => {
+       checkPermission(context.user.permissions, "superAdmin:administration:read");  
+      return await prisma.organization.findMany({
+        where: {
+          Permission: {
+            some: {},  
+          },
+        },
+        include: {
+          user: true,
+          Membership: {
+            include: {
+              plan: true,
+            },
+          },
+          Permission: true,
         },
       });
     },

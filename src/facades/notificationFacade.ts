@@ -45,19 +45,19 @@ export const sendInternalNotificatoin = async (
 };
 
 export const notifyAdmin = async (type: string, content: string) => {
-  const admins = await prisma.user.findMany({
-    where: {
-      UserRole: {
-        some: {
-          roleId: 1,
-        },
-      },
-    },
-  });
+  // const admins = await prisma.user.findMany({ //#CRITICAL
+  //   where: {
+  //     UserRole: {
+  //       some: {
+  //         roleId: 1,
+  //       },
+  //     },
+  //   },
+  // });
 
-  if (type === "INTERNAL") {
-    admins.map((admin) => {
-      sendInternalNotificatoin(admin.id, content);
-    });
-  }
+  // if (type === "INTERNAL") {
+  //   admins.map((admin) => {
+  //     sendInternalNotificatoin(admin.id, content);
+  //   });
+  // }
 };

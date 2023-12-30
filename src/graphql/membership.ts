@@ -10,7 +10,7 @@ import {
   updateMembership,
 } from "../facades/membershipFacade.js";
 import { connectStripePlanWithLocalPlan } from "../facades/paymentFacade.js";
-import { checkPermission } from "../facades/aclFacade.js";
+import { checkPermission } from "../facades/scurityFacade.js";
 
 const typeDefs = `#graphql
 
@@ -180,7 +180,7 @@ const resolvers = {
       args: any,
       context: MyContext
     ) => {
-      checkPermission(context.user.permissions, "billing:write");
+      checkPermission(context.user.permissions, "superAdmin:billing:write");
       return await connectStripePlanWithLocalPlan(args.planId);
     },
     disconectStripePlanWithLocalPlan: async (
@@ -188,7 +188,7 @@ const resolvers = {
       args: any,
       context: MyContext
     ) => {
-      checkPermission(context.user.permissions, "billing:write");
+      checkPermission(context.user.permissions, "superAdmin:billing:write");
       await prisma.planSetting.deleteMany({
         where: {
           planId: args.planId,
@@ -203,7 +203,7 @@ const resolvers = {
       context: MyContext
     ) => {
       try {
-        checkPermission(context.user.permissions, "billing:write");
+        checkPermission(context.user.permissions, "superAdmin:billing:write");
         const oldConection = await prisma.planCapabilities.findFirst({
           where: {
             capabilitieId: args.capabilitieId,
@@ -236,7 +236,7 @@ const resolvers = {
     },
     createCapabilitie: async (root: any, args: any, context: MyContext) => {
       try {
-        checkPermission(context.user.permissions, "billing:write");
+        checkPermission(context.user.permissions, "superAdmin:billing:write");
         return await prisma.capabilitie.create({
           data: {
             name: args.name,
@@ -249,7 +249,7 @@ const resolvers = {
       }
     },
     deleteCapabilitie: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "billing:write");
+      checkPermission(context.user.permissions, "superAdmin:billing:write");
       try {
         await prisma.capabilitie.delete({
           where: {
@@ -263,7 +263,7 @@ const resolvers = {
       }
     },
     createPlan: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "billing:write");
+      checkPermission(context.user.permissions, "superAdmin:billing:write");
       try {
         await prisma.plan.upsert({
           where: {

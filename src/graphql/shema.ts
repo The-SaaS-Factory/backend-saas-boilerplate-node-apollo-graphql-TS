@@ -15,12 +15,17 @@ import {
   typeDefs as CurrenciesTypes,
   resolvers as CurrenciesResolvers,
 } from "./currencies.js";
- 
+
+import {
+  typeDefs as SecutiryTypes,
+  resolvers as SecurityResolvers,
+} from "./security.js";
+
 import {
   typeDefs as OrganizationTypes,
   resolvers as OrganizationResolvers,
 } from "./organization.js";
- 
+
 import {
   typeDefs as AdministrationTypes,
   resolvers as AdministrationResolvers,
@@ -38,6 +43,7 @@ const RootQuery = `
 
 const typeDefs = [
   RootQuery,
+  SecutiryTypes,
   EconomyTypes,
   MembershipTypes,
   UsersTypes,
@@ -50,6 +56,7 @@ const typeDefs = [
 const resolvers = [
   UserResolvers,
   EconomyResolvers,
+  SecurityResolvers,
   MembershipResolvers,
   InvoiceResolvers,
   SuportResolvers,
