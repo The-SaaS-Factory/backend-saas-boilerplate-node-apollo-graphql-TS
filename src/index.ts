@@ -110,19 +110,23 @@ const authMiddleware = async (req, res, next) => {
     const BearerToken = req.headers.authorization || "";
     const token = BearerToken.replace("Bearer ", "");
     const decodedToken: any = jwt.decode(token);
-    const userId = decodedToken.sub;
+    
+    const user = await getUser(decodedToken);
+    
+    //Improve performance with cache system
+    //Implement here Cache system with Redis or other system
 
-    let user: any = null;
+    //Example cache temporal local memory
+    //const userId = decodedToken.sub;
+    //let user: any = null;
+    // if (userCache[userId]) {
+    //   console.log("user from cache")
+    //   user = userCache[userId].user;
+    // } else {
+    //   userCache[userId] = { user };
+    //   console.log("user from db");
 
-    if (userCache[userId]) {
-      console.log("user from cache")
-      user = userCache[userId].user;
-    } else {
-      user = await getUser(decodedToken);
-      userCache[userId] = { user };
-      console.log("user from db");
-
-    }
+    // }
 
     req.user = user;
 
