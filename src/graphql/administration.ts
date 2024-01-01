@@ -148,7 +148,7 @@ const resolvers = {
       return settings;
     },
     getKpis: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "superAdmin:dashboard:read");
+      checkPermission(context.user.permissions, "superAdmin:administration:read");
       const period = args.period || 1;
       const kpis = await prisma.adminKpi.findMany({
         where: {
