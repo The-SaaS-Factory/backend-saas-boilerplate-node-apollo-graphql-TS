@@ -41,13 +41,15 @@ const typeDefs = `#graphql
     removePermissionFromModule(moduleId: Int!, permissionId: Int!): ModuleType
     addOrganizationToModule(moduleId: Int!, organizationId: Int!): ModuleType
     removeOrganizationFromModule(moduleId: Int!, organizationId: Int!): ModuleType
+    addPermissionToOrganization(organizationId: Int!, permissionId: Int!): OrganizationType
+    removePermissionFromOrganization(organizationId: Int!, permissionId: Int!): OrganizationType
   }
 `;
 
 const resolvers = {
   Query: {
     getModules: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "superAdmin:administration:read"); 
+      checkPermission(context.user.permissions, "superAdmin:settings:read");
       return await prisma.module.findMany({
         include: {
           Permission: true,
@@ -56,7 +58,7 @@ const resolvers = {
       });
     },
     getPermissions: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "superAdmin:administration:read"); 
+      checkPermission(context.user.permissions, "superAdmin:settings:read");
       return await prisma.permission.findMany({
         include: {
           Module: true,
@@ -66,7 +68,7 @@ const resolvers = {
   },
   Mutation: {
     addPermissionToModule: async (root: any, args: any, context: MyContext) => {
-      checkPermission(context.user.permissions, "superAdmin:administration:read"); 
+      checkPermission(context.user.permissions, "superAdmin:settings:read");
       return await prisma.module.update({
         where: {
           id: args.moduleId,
@@ -85,7 +87,7 @@ const resolvers = {
       args: any,
       context: MyContext
     ) => {
-      checkPermission(context.user.permissions, "superAdmin:administration:read");  
+      checkPermission(context.user.permissions, "superAdmin:settings:read");
       return await prisma.module.update({
         where: {
           id: args.moduleId,
@@ -105,7 +107,7 @@ const resolvers = {
       context: MyContext
     ) => {
       return prisma.$transaction(async (tx) => {
-        checkPermission(context.user.permissions, "superAdmin:administration:read"); 
+        checkPermission(context.user.permissions, "superAdmin:settings:read");
         const moduleOrganization = await tx.module.update({
           where: {
             id: args.moduleId,
@@ -148,32 +150,17 @@ const resolvers = {
         const organizationPermissionIds = organizationPermission.map(
           (p) => p.id
         );
-        const permissionIds = modulePermissionIds.filter(
-          (p) => !organizationPermissionIds.includes(p)
-        );
 
-        const permissions = await tx.permission.findMany({
+        const permissionsToAdd = await tx.permission.findMany({
           where: {
             id: {
-              in: permissionIds,
+              in: modulePermissionIds.concat(organizationPermissionIds),
             },
           },
         });
 
-        await tx.organization.update({
-          where: {
-            id: args.organizationId,
-          },
-          data: {
-            Permission: {
-              connect: permissions,
-            },
-          },
-        });
+        const permissionsNames = permissionsToAdd.map((p) => p.name);
 
-        const permissionsNames = permissions.map((p) => p.name);
-       
-        
         handleUpdateDataForOrganization({
           scope: "publicMetadata",
           organizationBdId: args.organizationId,
@@ -190,7 +177,7 @@ const resolvers = {
       args: any,
       context: MyContext
     ) => {
-      checkPermission(context.user.permissions, "superAdmin:administration:read");  
+      checkPermission(context.user.permissions, "superAdmin:settings:read");
       return prisma.$transaction(async (tx) => {
         const moduleOrganization = await prisma.module.update({
           where: {
@@ -272,6 +259,106 @@ const resolvers = {
         });
 
         return moduleOrganization;
+      });
+    },
+    addPermissionToOrganization: async (
+      root: any,
+      args: any,
+      context: MyContext
+    ) => {
+      checkPermission(
+        context.user.permissions,
+        "superAdmin:administration:read"
+      );
+      return prisma.$transaction(async (tx) => {
+        const permission = await tx.permission.findFirst({
+          where: {
+            id: args.permissionId,
+          },
+        });
+
+        const organizationPermission = await tx.permission.findMany({
+          where: {
+            Organization: {
+              some: {
+                id: args.organizationId,
+              },
+            },
+          },
+        });
+
+        const permissionIds = organizationPermission.map((p) => p.id);
+
+        const permissions = await tx.permission.findMany({
+          where: {
+            id: {
+              in: permissionIds.concat(permission?.id),
+            },
+          },
+        });
+
+
+        const permissionsNames = permissions.map((p) => p.name);
+
+        handleUpdateDataForOrganization({
+          scope: "publicMetadata",
+          organizationBdId: args.organizationId,
+          data: {
+            permissions: permissionsNames,
+          },
+        });
+
+        return permissions;
+      });
+    },
+    removePermissionFromOrganization: async (
+      root: any,
+      args: any,
+      context: MyContext
+    ) => {
+      checkPermission(
+        context.user.permissions,
+        "superAdmin:settings:read"
+      );
+      return prisma.$transaction(async (tx) => {
+        const permission = await tx.permission.findFirst({
+          where: {
+            id: args.permissionId,
+          },
+        });
+
+        const organizationPermission = await tx.permission.findMany({
+          where: {
+            Organization: {
+              some: {
+                id: args.organizationId,
+              },
+            },
+          },
+        });
+
+        const permissionIds = organizationPermission.map((p) => p.id);
+
+        const permissions = await tx.permission.findMany({
+          where: {
+            id: {
+              in: permissionIds.filter((p) => p !== permission?.id),
+            },
+          },
+          
+        });
+
+        const permissionsNames = permissions.map((p) => p.name);
+
+        handleUpdateDataForOrganization({
+          scope: "publicMetadata",
+          organizationBdId: args.organizationId,
+          data: {
+            permissions: permissionsNames,
+          },
+        });
+
+        return permissions;
       });
     },
   },

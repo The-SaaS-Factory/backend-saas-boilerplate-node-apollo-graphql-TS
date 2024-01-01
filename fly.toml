@@ -6,7 +6,7 @@
 # Change App Name !!!
 app = "backend-saas-boilerplate"
 
-primary_region = "gru"
+primary_region = "mia"
 
 [build]
   dockerfile = "Dockerfile"

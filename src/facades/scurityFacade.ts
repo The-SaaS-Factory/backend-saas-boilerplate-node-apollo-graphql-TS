@@ -67,14 +67,10 @@ export const syncOrganizationPermissions = async (
   permissionsNames: string[],
   client: PrismaClient = prisma
 ) => {
-  console.log(permissionsNames);
-
-  if (!permissionsNames || permissionsNames.length === 0) return;
-
-  const permissions = await prisma.permission.findMany({
+  const permissionsToConnect = await prisma.permission.findMany({
     where: {
       name: {
-        in: permissionsNames,
+        in: !permissionsNames ? [] : permissionsNames,
       },
       Organization: {
         none: {
@@ -84,14 +80,31 @@ export const syncOrganizationPermissions = async (
     },
   });
 
-  if (permissions.length === 0) return;
+  const permissionsToDisconnect = await prisma.permission.findMany({
+    where: {
+      name: {
+        notIn: !permissionsNames ? [] : permissionsNames,
+      },
+      Organization: {
+        some: {
+          id: organizationId,
+        },
+      },
+    },
+  });
+
+  // console.log("permissionsToConnect", permissionsToConnect);
+  // console.log("permissionsToDisconnect", permissionsToDisconnect);
+  
+
   await client.organization.update({
     where: {
       id: organizationId,
     },
     data: {
       Permission: {
-        connect: permissions,
+        connect: permissionsToConnect,
+        disconnect: permissionsToDisconnect,
       },
     },
   });
