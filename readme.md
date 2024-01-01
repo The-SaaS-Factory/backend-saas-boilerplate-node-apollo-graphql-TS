@@ -13,6 +13,16 @@ Our vision is that a programmer with a regular job can, with this boilerplate, l
 - Backend App - Node - [Apollo Server](https://www.apollographql.com/docs/apollo-server/) - [Graphql](https://graphql.org/) - [Prisma  ](https://www.prisma.io/)  **(This repo)** 
 - Integrations: Stripe, [Imagekit](https://imagekit.io/), [Loops So](https://loops.so/)
 
+## Demo
+[https://demo.thesaasfactory.dev/](https://demo.thesaasfactory.dev/) 
+
+## Documentation 
+[https://docs.thesaasfactory.dev/](https://docs.thesaasfactory.dev/)
+
+**Super Admin Credentials**
+    - email: thesaasfactory@gmail.com
+    - pass: Demo@2023
+
 ## Top Features
 
 1.  **GraphQL with Apollo :**  The GraphQL-based architecture makes data retrieval efficient, while Apollo Client simplifies application state management, enhancing user experience and reducing server load.
